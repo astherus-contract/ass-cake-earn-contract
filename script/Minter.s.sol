@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "forge-std/Script.sol";
+import { Minter } from "../src/Minter.sol";
+import { Upgrades } from "openzeppelin-foundry-upgrades/Upgrades.sol";
+
+contract MinterScript is Script {
+  function setUp() public {}
+
+  function run() public {
+    //    uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+    //    address deployer = vm.addr(deployerPrivateKey);
+    address deployer = msg.sender;
+    console.log("Deployer: %s", deployer);
+    address admin = vm.envOr("ADMIN", deployer);
+    console.log("Admin: %s", admin);
+    // token
+    address token = vm.envAddress("TOKEN");
+    require(token != address(0), "Token address cannot be null");
+    console.log("Token: %s", token);
+
+    // AssToken address
+    address assToken = vm.envAddress("ASSTOKEN");
+    require(assToken != address(0), "AssToken address cannot be null");
+    console.log("AssToken: %s", assToken);
+
+    // swap router
+    address swapRouter = vm.envAddress("SWAP_ROUTER");
+    require(swapRouter != address(0), "Swap router address cannot be null");
+    console.log("Swap Router: %s", swapRouter);
+
+    // swap contract
+    address smartPool = vm.envAddress("SWAP_POOL");
+    require(smartPool != address(0), "Swap pool address cannot be null");
+    console.log("Swap Pool: %s", smartPool);
+
+    // max swap ratio
+    uint256 maxSwapRatio = vm.envUint("MAX_SWAP_RATIO");
+
+    //    vm.startBroadcast(deployerPrivateKey);
+    vm.startBroadcast();
+    address proxy = Upgrades.deployTransparentProxy(
+      "Minter.sol",
+      admin,
+      abi.encodeCall(
+        Minter.initialize,
+        (admin, token, assToken, swapRouter, smartPool, maxSwapRatio)
+      )
+    );
+    vm.stopBroadcast();
+    console.log("Minter proxy address: %s", proxy);
+    address implAddress = Upgrades.getImplementationAddress(proxy);
+    console.log("Minter implementation address: %s", implAddress);
+    address proxyAdminAddress = Upgrades.getAdminAddress(proxy);
+    console.log("Minter proxy admin address: %s", proxyAdminAddress);
+  }
+}
