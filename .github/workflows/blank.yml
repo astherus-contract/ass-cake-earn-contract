@@ -31,7 +31,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1        
         
-      - name: Check Code Style
+      - name: Check coding standards
         run: npm run check
         
       - name: Run tests
