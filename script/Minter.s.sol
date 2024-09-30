@@ -25,6 +25,14 @@ contract MinterScript is Script {
     require(assToken != address(0), "AssToken address cannot be null");
     console.log("AssToken: %s", assToken);
 
+    // universalProxy address
+    address universalProxy = vm.envAddress("UNIVERSAL_PROXY");
+    require(
+      universalProxy != address(0),
+      "universalProxy address cannot be null"
+    );
+    console.log("universalProxy: %s", universalProxy);
+
     // swap router
     address swapRouter = vm.envAddress("SWAP_ROUTER");
     require(swapRouter != address(0), "Swap router address cannot be null");
@@ -45,7 +53,15 @@ contract MinterScript is Script {
       admin,
       abi.encodeCall(
         Minter.initialize,
-        (admin, token, assToken, swapRouter, smartPool, maxSwapRatio)
+        (
+          admin,
+          token,
+          assToken,
+          universalProxy,
+          swapRouter,
+          smartPool,
+          maxSwapRatio
+        )
       )
     );
     vm.stopBroadcast();
