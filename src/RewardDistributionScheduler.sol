@@ -111,11 +111,11 @@ contract RewardDistributionScheduler is
       lastTimestamp -= i * 1 days;
       for (uint j; j < max; j++) {
         if (epochs[lastTimestamp][IMinter.RewardsType(j)] != 0) {
-          IMinter(minter).compoundRewards(
-            IMinter.RewardsType(j),
-            epochs[lastTimestamp][IMinter.RewardsType(j)]
-          );
+          uint256 amount = epochs[lastTimestamp][IMinter.RewardsType(j)];
+          IERC20(token).safeIncreaseAllowance(minter, amount);
+
           delete epochs[lastTimestamp][IMinter.RewardsType(j)];
+          IMinter(minter).compoundRewards(IMinter.RewardsType(j), amount);
         }
       }
       //      delete epochs[lastTimestamp];
