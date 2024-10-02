@@ -17,11 +17,11 @@ import "./interfaces/pancakeswap/IIFOV8.sol";
 import "./interfaces/stakeDao/ICakePlatform.sol";
 
 contract Minter is
-IUniversalProxy,
-AccessControlUpgradeable,
-PausableUpgradeable,
-ReentrancyGuardUpgradeable,
-UUPSUpgradeable
+  IUniversalProxy,
+  AccessControlUpgradeable,
+  PausableUpgradeable,
+  ReentrancyGuardUpgradeable,
+  UUPSUpgradeable
 {
   using SafeERC20 for IERC20;
   // pause role
@@ -91,7 +91,10 @@ UUPSUpgradeable
     require(_token != address(0), "Invalid token address");
     require(_veToken != address(0), "Invalid veToken address");
     require(_gaugeVoting != address(0), "Invalid gaugeVoting address");
-    require(_revenueSharingPoolGateway != address(0), "Invalid revenueSharingPoolGateway address");
+    require(
+      _revenueSharingPoolGateway != address(0),
+      "Invalid revenueSharingPoolGateway address"
+    );
 
     __Pausable_init();
     __ReentrancyGuard_init();
@@ -106,7 +109,9 @@ UUPSUpgradeable
     gaugeVoting = IGaugeVoting(_gaugeVoting);
     ifo = IIFOV8(_ifo);
     revenueSharingPools = _revenueSharingPools;
-    rewardsDistributionScheduler = IRewardDistributionScheduler(_rewardDistributionScheduler);
+    rewardsDistributionScheduler = IRewardDistributionScheduler(
+      _rewardDistributionScheduler
+    );
     MAX_LOCK_DURATION = _maxLockDuration;
     cakePlatform = ICakePlatform(_cakePlatform);
   }
@@ -123,7 +128,7 @@ UUPSUpgradeable
    * @dev token will be transferred from MINTER
    * @param amount - amount to lock
    */
-  function increaseLock(uint256 amount) external onlyRole(MINTER) override {
+  function increaseLock(uint256 amount) external override onlyRole(MINTER) {
     require(amount > 0, "value must greater than 0");
     // create lock if not created
     if (!lockCreated) {
@@ -135,9 +140,11 @@ UUPSUpgradeable
       // get new unlock time
       uint256 newUnlockTime = block.timestamp + MAX_LOCK_DURATION;
       // get lock end time
-      (,,,,uint48 lockEndTime,,,) = IVeCake(veToken).getUserInfo(address(this));
+      (, , , , uint48 lockEndTime, , , ) = IVeCake(veToken).getUserInfo(
+        address(this)
+      );
       // increase unlock time if new unlock time is greater than lock end time
-      if ((newUnlockTime / 1 weeks * 1 weeks) > lockEndTime) {
+      if (((newUnlockTime / 1 weeks) * 1 weeks) > lockEndTime) {
         veToken.increaseUnlockTime(newUnlockTime);
       }
     }
@@ -149,7 +156,9 @@ UUPSUpgradeable
    *      for a long time and the lock duration is about to expire
    * @param unlockTime - new unlock time
    */
-  function extendLock(uint256 unlockTime) external onlyRole(DEFAULT_ADMIN_ROLE) override {
+  function extendLock(
+    uint256 unlockTime
+  ) external override onlyRole(DEFAULT_ADMIN_ROLE) {
     require(unlockTime > 0, "unlock time must greater than 0");
     veToken.increaseUnlockTime(unlockTime);
     emit LockExtended(unlockTime);
@@ -160,13 +169,13 @@ UUPSUpgradeable
   // ------------------------------ //
 
   /**
-    * @dev case vote for gauge weights
-    * @param gauge_addrs - array of gauge addresses
-    * @param user_weights - array of user weights
-    * @param chainIds - array of chain ids
-    * @param skipNative - skip native chain
-    * @param skipProxy - skip proxy chain
-    */
+   * @dev case vote for gauge weights
+   * @param gauge_addrs - array of gauge addresses
+   * @param user_weights - array of user weights
+   * @param chainIds - array of chain ids
+   * @param skipNative - skip native chain
+   * @param skipProxy - skip proxy chain
+   */
   function caseVote(
     address[] memory gauge_addrs,
     uint256[] memory user_weights,
@@ -190,13 +199,12 @@ UUPSUpgradeable
    *      for more info of PCS's voting, plz refer to:
    *      https://developer.pancakeswap.finance/contracts/vecake-and-gauge-voting
    */
-  function claimVeTokenRewards()
-    external
-    onlyRole(BOT)
-  {
+  function claimVeTokenRewards() external onlyRole(BOT) {
     uint256 totalClaimed = 0;
     for (uint256 i = 0; i < revenueSharingPools.length; ++i) {
-      totalClaimed += IRevenueSharingPool(revenueSharingPools[i]).claimForUser(_for);
+      totalClaimed += IRevenueSharingPool(revenueSharingPools[i]).claimForUser(
+        _for
+      );
     }
     // create rewards distribution schedule
     rewardsDistributionScheduler.addRewardsSchedule(
@@ -241,8 +249,7 @@ UUPSUpgradeable
   function harvestIFO(
     uint8 pid,
     address rewardToken
-  ) external onlyRole(DEFAULT_ADMIN_ROLE)
-  {
+  ) external onlyRole(DEFAULT_ADMIN_ROLE) {
     // get harvested token from IFO
     IIFOV8(_pancakeIFO).harvestPool(pid);
     // not all tokens are exchanged to IFO tokens
@@ -269,7 +276,9 @@ UUPSUpgradeable
    *      or recipient parameter provided if called by msg.sender.
    * @param recipient - address of the recipient
    */
-  function setRecipient(address recipient) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  function setRecipient(
+    address recipient
+  ) external onlyRole(DEFAULT_ADMIN_ROLE) {
     // recipient can be zero address
     // if zero address is set, then msg.sender will be used as recipient
     cakePlatform.setRecipient(recipient);
@@ -287,7 +296,6 @@ UUPSUpgradeable
     cakePlatform.claimAllFor(msg.sender, ids);
   }
 
-
   // ------------------------------ //
   //         Administration         //
   // ------------------------------ //
@@ -295,10 +303,9 @@ UUPSUpgradeable
    * @dev set revenue sharing pools
    * @param poolIds - array of pool ids
    */
-  function setRevenuePoolIds(address[] memory poolIds)
-    external
-    onlyRole(DEFAULT_ADMIN_ROLE)
-  {
+  function setRevenuePoolIds(
+    address[] memory poolIds
+  ) external onlyRole(DEFAULT_ADMIN_ROLE) {
     revenueSharingPools = poolIds;
     emit RevenuePoolIdsSet(poolIds);
   }
@@ -307,10 +314,9 @@ UUPSUpgradeable
    * @dev set maximum lock duration
    * @param maxLockDuration - maximum lock duration
    */
-  function setMaxLockDuration(uint256 maxLockDuration)
-    external
-    onlyRole(DEFAULT_ADMIN_ROLE)
-  {
+  function setMaxLockDuration(
+    uint256 maxLockDuration
+  ) external onlyRole(DEFAULT_ADMIN_ROLE) {
     MAX_LOCK_DURATION = maxLockDuration;
     emit MaxLockDurationSet(maxLockDuration);
   }
@@ -318,20 +324,14 @@ UUPSUpgradeable
   /**
    * @dev Flips the pause state
    */
-  function togglePause()
-    external
-    onlyRole(DEFAULT_ADMIN_ROLE)
-  {
+  function togglePause() external onlyRole(DEFAULT_ADMIN_ROLE) {
     paused() ? _unpause() : _pause();
   }
 
   /**
    * @dev pause the contract
    */
-  function pause()
-    external
-    onlyRole(PAUSER)
-  {
+  function pause() external onlyRole(PAUSER) {
     _pause();
   }
 
