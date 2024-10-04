@@ -146,9 +146,7 @@ contract UniversalProxy is
       // get new unlock time
       uint256 newUnlockTime = block.timestamp + maxLockDuration;
       // get lock end time
-      (, , , , uint48 lockEndTime, , , ) = IVeCake(veToken).getUserInfo(
-        address(this)
-      );
+      (, , , , uint48 lockEndTime, , , ) = veToken.getUserInfo(address(this));
       // increase unlock time if new unlock time is greater than lock end time
       if (((newUnlockTime / 1 weeks) * 1 weeks) > lockEndTime) {
         veToken.increaseUnlockTime(newUnlockTime);
