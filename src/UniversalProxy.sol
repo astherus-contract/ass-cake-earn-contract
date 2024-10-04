@@ -16,7 +16,7 @@ import "./interfaces/pancakeswap/IRevenueSharingPool.sol";
 import "./interfaces/pancakeswap/IIFOV8.sol";
 import "./interfaces/stakeDao/ICakePlatform.sol";
 
-contract Minter is
+contract UniversalProxy is
   IUniversalProxy,
   AccessControlUpgradeable,
   PausableUpgradeable,
