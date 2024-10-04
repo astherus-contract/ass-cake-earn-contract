@@ -128,7 +128,7 @@ contract Minter is
    * @dev token will be transferred from MINTER
    * @param amount - amount to lock
    */
-  function increaseLock(uint256 amount) external override onlyRole(MINTER) {
+  function lock(uint256 amount) external override onlyRole(MINTER) {
     require(amount > 0, "value must greater than 0");
     // create lock if not created
     if (!lockCreated) {
