@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "./IMinter.sol";
+
 /// @title RewardDistributionScheduler interface
 interface IRewardDistributionScheduler {
-    function addRewardsSchedule(uint16 _type, uint16 _amount, uint256 _epochs, uint256 _startTime) external;
+  function initialize(
+    address _admin,
+    address _token,
+    address _minter
+  ) external;
 
-    function executeRewardSchedules() external;
+  function addRewardsSchedule(IMinter.RewardsType _rewardsType, uint256 _amount, uint256 _epochs, uint256 _startTime) external;
+
+  function executeRewardSchedules() external;
 }
