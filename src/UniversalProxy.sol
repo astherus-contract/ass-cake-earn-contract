@@ -29,7 +29,7 @@ contract UniversalProxy is
   // minter role
   bytes32 public constant MINTER = keccak256("MINTER");
   // bot role
-  bytes32 public constant BOT = keccak("BOT");
+  bytes32 public constant BOT = keccak256("BOT");
 
   /* ============ State Variables ============ */
   // token address
@@ -86,14 +86,20 @@ contract UniversalProxy is
     address[] memory _revenueSharingPools,
     uint256 _maxLockDuration,
     address _cakePlatform
-  ) external override initializer {
+  ) external initializer {
     require(_admin != address(0), "Invalid admin address");
     require(_token != address(0), "Invalid token address");
     require(_veToken != address(0), "Invalid veToken address");
     require(_gaugeVoting != address(0), "Invalid gaugeVoting address");
+    require(_ifo != address(0), "Invalid ifo address");
+    require(_cakePlatform != address(0), "Invalid cakePlatform address");
     require(
-      _revenueSharingPoolGateway != address(0),
-      "Invalid revenueSharingPoolGateway address"
+      _rewardDistributionScheduler != address(0),
+      "Invalid rewardDistributionScheduler address"
+    );
+    require(
+      _revenueSharingPools.length > 0,
+      "revenueSharingPools must have at least one address"
     );
 
     __Pausable_init();
@@ -170,8 +176,8 @@ contract UniversalProxy is
 
   /**
    * @dev case vote for gauge weights
-   * @param gauge_addrs - array of gauge addresses
-   * @param user_weights - array of user weights
+   * @param gaugeAddrs - array of gauge addresses
+   * @param userWeights - array of user weights
    * @param chainIds - array of chain ids
    * @param skipNative - skip native chain
    * @param skipProxy - skip proxy chain
@@ -203,7 +209,7 @@ contract UniversalProxy is
     uint256 totalClaimed = 0;
     for (uint256 i = 0; i < revenueSharingPools.length; ++i) {
       totalClaimed += IRevenueSharingPool(revenueSharingPools[i]).claimForUser(
-        _for
+        address(this)
       );
     }
     // create rewards distribution schedule
@@ -228,8 +234,8 @@ contract UniversalProxy is
     uint8 pid,
     uint256 amount
   ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-    require(_amount > 0, "amount must be greater than 0");
-    require(_pid >= 0, "invalid pid");
+    require(amount > 0, "amount must be greater than 0");
+    require(pid >= 0, "invalid pid");
     // save how much token is deposited
     ifoPositions[pid] += amount;
     // transfer token from multi-sig wallet to here
@@ -251,7 +257,7 @@ contract UniversalProxy is
     address rewardToken
   ) external onlyRole(DEFAULT_ADMIN_ROLE) {
     // get harvested token from IFO
-    IIFOV8(_pancakeIFO).harvestPool(pid);
+    IIFOV8(ifo).harvestPool(pid);
     // not all tokens are exchanged to IFO tokens
     uint256 refundAmt = token.balanceOf(address(this)) - ifoPositions[pid];
     // get harvested token amount from IFO
@@ -261,7 +267,7 @@ contract UniversalProxy is
       token.safeTransfer(msg.sender, refundAmt);
     }
     if (harvestedAmt > 0) {
-      IERC20(_rewardToken).safeTransfer(msg.sender, harvestedAmt);
+      IERC20(rewardToken).safeTransfer(msg.sender, harvestedAmt);
     }
     emit IFOHarvested(pid, rewardToken, harvestedAmt);
   }
@@ -312,13 +318,13 @@ contract UniversalProxy is
 
   /**
    * @dev set maximum lock duration
-   * @param maxLockDuration - maximum lock duration
+   * @param _maxLockDuration - maximum lock duration
    */
   function setMaxLockDuration(
-    uint256 maxLockDuration
+    uint256 _maxLockDuration
   ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-    maxLockDuration = maxLockDuration;
-    emit MaxLockDurationSet(maxLockDuration);
+    maxLockDuration = _maxLockDuration;
+    emit MaxLockDurationSet(_maxLockDuration);
   }
 
   /**
