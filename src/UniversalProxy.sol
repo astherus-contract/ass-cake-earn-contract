@@ -53,12 +53,12 @@ contract Minter is
   // @TODO use flag instead of checking on veCake contract should use less gas?
   bool public lockCreated;
   // maximum lock duration
-  uint256 public MAX_LOCK_DURATION;
+  uint256 public maxLockDuration;
 
   /* ============ Events ============ */
   event LockIncreased(uint256 value);
   event LockExtended(uint256 unlockTime);
-  event veTokenRewardsClaimed(uint256 amount);
+  event VeTokenRewardsClaimed(uint256 amount);
   event IFODeposited(uint8 pid, uint256 amount);
   event IFOHarvested(uint8 pid, address rewardToken, uint256 amount);
   event RevenuePoolIdsSet(address[] poolIds);
@@ -112,7 +112,7 @@ contract Minter is
     rewardsDistributionScheduler = IRewardDistributionScheduler(
       _rewardDistributionScheduler
     );
-    MAX_LOCK_DURATION = _maxLockDuration;
+    maxLockDuration = _maxLockDuration;
     cakePlatform = ICakePlatform(_cakePlatform);
   }
 
@@ -132,13 +132,13 @@ contract Minter is
     require(amount > 0, "value must greater than 0");
     // create lock if not created
     if (!lockCreated) {
-      veToken.createLock(amount, block.timestamp + MAX_LOCK_DURATION);
+      veToken.createLock(amount, block.timestamp + maxLockDuration);
       lockCreated = true;
     } else {
       // increase lock amount
       veToken.increaseLockAmount(amount);
       // get new unlock time
-      uint256 newUnlockTime = block.timestamp + MAX_LOCK_DURATION;
+      uint256 newUnlockTime = block.timestamp + maxLockDuration;
       // get lock end time
       (, , , , uint48 lockEndTime, , , ) = IVeCake(veToken).getUserInfo(
         address(this)
@@ -177,16 +177,16 @@ contract Minter is
    * @param skipProxy - skip proxy chain
    */
   function caseVote(
-    address[] memory gauge_addrs,
-    uint256[] memory user_weights,
+    address[] memory gaugeAddrs,
+    uint256[] memory userWeights,
     uint256[] memory chainIds,
     bool skipNative,
     bool skipProxy
   ) external onlyRole(DEFAULT_ADMIN_ROLE) {
     // @TODO shall we add more checks here?
     gaugeVoting.voteForGaugeWeightsBulk(
-      gauge_addrs,
-      user_weights,
+      gaugeAddrs,
+      userWeights,
       chainIds,
       skipNative,
       skipProxy
@@ -213,7 +213,7 @@ contract Minter is
       7,
       block.timestamp
     );
-    emit veTokenRewardsClaimed(totalClaimed);
+    emit VeTokenRewardsClaimed(totalClaimed);
   }
 
   // ------------------------------ //
@@ -317,7 +317,7 @@ contract Minter is
   function setMaxLockDuration(
     uint256 maxLockDuration
   ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-    MAX_LOCK_DURATION = maxLockDuration;
+    maxLockDuration = maxLockDuration;
     emit MaxLockDurationSet(maxLockDuration);
   }
 
