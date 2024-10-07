@@ -136,6 +136,8 @@ contract UniversalProxy is
    */
   function lock(uint256 amount) external override onlyRole(MINTER) {
     require(amount > 0, "value must greater than 0");
+    // transfer token from minter to this contract
+    token.safeTransferFrom(msg.sender, address(this), amount);
     // create lock if not created
     if (!lockCreated) {
       veToken.createLock(amount, block.timestamp + maxLockDuration);
