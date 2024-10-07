@@ -140,6 +140,7 @@ contract UniversalProxy is
     token.safeTransferFrom(msg.sender, address(this), amount);
     // create lock if not created
     if (!lockCreated) {
+      token.safeIncreaseAllowance(address(veToken), amount);
       veToken.createLock(amount, block.timestamp + maxLockDuration);
       lockCreated = true;
     } else {
