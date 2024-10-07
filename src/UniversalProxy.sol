@@ -213,6 +213,11 @@ contract UniversalProxy is
         address(this)
       );
     }
+    // approve rewardsDistributionScheduler to spend reward tokens
+    token.safeIncreaseAllowance(
+      address(rewardsDistributionScheduler),
+      totalClaimed
+    );
     // create rewards distribution schedule
     rewardsDistributionScheduler.addRewardsSchedule(
       IMinter.RewardsType.VeTokenRewards,
