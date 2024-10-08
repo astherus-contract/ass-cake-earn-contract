@@ -305,7 +305,7 @@ contract UniversalProxy is
    */
   function claimRewardsFromStakeDao(uint256[] calldata ids) external {
     // claim rewards from multiple bounties
-    cakePlatform.claimAllFor(msg.sender, ids);
+    cakePlatform.claimAllFor(address(this), ids);
   }
 
   // ------------------------------ //
