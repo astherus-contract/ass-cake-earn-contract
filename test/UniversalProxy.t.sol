@@ -212,5 +212,4 @@ contract UniversalProxyTest is Test {
     // cake platform will distribute 10 tokens to each recipient
     assertEq(token.balanceOf(recipient), 10 ether);
   }
-
 }
