@@ -27,20 +27,21 @@ interface altIVeToken {
 }
 
 contract UniversalProxyTest is Test {
-
   using SafeERC20 for IERC20;
 
   address admin = makeAddr("ADMIN");
   address minter = makeAddr("MINTER");
   address pauser = makeAddr("PAUSER");
   address bot = makeAddr("BOT");
+  address recipient = makeAddr("RECIPIENT");
   // BSC CAKE
   IERC20 token = IERC20(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
   // veCake owner
   address veCakeOwner = 0xe6cdC66A96458FbF11F632B50964153fBDa78548;
   // BSC veCake
   IVeCake veToken = IVeCake(0x5692DB8177a81A6c6afc8084C2976C9933EC1bAB);
-  altIVeToken altVeToken = altIVeToken(0x5692DB8177a81A6c6afc8084C2976C9933EC1bAB);
+  altIVeToken altVeToken =
+    altIVeToken(0x5692DB8177a81A6c6afc8084C2976C9933EC1bAB);
   MockGaugeVoting gaugeVoting;
   MockIFO ifo;
   RewardDistributionScheduler rewardDistributionScheduler;
@@ -48,6 +49,9 @@ contract UniversalProxyTest is Test {
   address[] revenueSharingPools;
   address cakePlatform;
   uint256 maxLockDuration;
+  // For IFO, we set IFO token as TON for example
+  uint8 pid = 1;
+  address ifoToken = 0x76A797A59Ba2C17726896976B7B3747BfD1d220f;
 
   function setUp() public {
     // fork mainnet
@@ -62,7 +66,9 @@ contract UniversalProxyTest is Test {
     console.log("Mock GaugeVoting address: %s", address(gaugeVoting));
 
     // deploy ifo
-    ifo = new MockIFO();
+    ifo = new MockIFO(pid, ifoToken);
+    // give ifo pool 1000 token
+    deal(address(ifoToken), address(ifo), 1000 ether);
     console.log("Mock IFO address: %s", address(ifo));
 
     // deploy rewardDistributionScheduler proxy
@@ -70,20 +76,22 @@ contract UniversalProxyTest is Test {
       "RewardDistributionScheduler.sol",
       abi.encodeCall(
         RewardDistributionScheduler.initialize,
-        (
-          admin,
-          address(token),
-          minter
-        )
+        (admin, address(token), minter)
       )
     );
-    rewardDistributionScheduler = RewardDistributionScheduler(address(rdsProxy));
+    rewardDistributionScheduler = RewardDistributionScheduler(
+      address(rdsProxy)
+    );
     console.log("RewardDistributionScheduler address: %s", address(rdsProxy));
 
     // deploy revenueSharingPools
     revenueSharingPools = new address[](2);
-    revenueSharingPools[0] = address(new MockRevenueSharingPool(address(token)));
-    revenueSharingPools[1] = address(new MockRevenueSharingPool(address(token)));
+    revenueSharingPools[0] = address(
+      new MockRevenueSharingPool(address(token))
+    );
+    revenueSharingPools[1] = address(
+      new MockRevenueSharingPool(address(token))
+    );
     // give some reward token to pools
     deal(address(token), revenueSharingPools[0], 1000 ether);
     deal(address(token), revenueSharingPools[1], 1000 ether);
@@ -136,6 +144,7 @@ contract UniversalProxyTest is Test {
     // lock not created
     assertEq(universalProxy.lockCreated(), false);
 
+    // simulate Minter lock tokens in to universalProxy
     vm.startPrank(minter);
     // approve 100 tokens to universalProxy
     token.approve(address(universalProxy), 100 ether);
@@ -154,7 +163,7 @@ contract UniversalProxyTest is Test {
   function test_cast_vote() public {
     // lock token first
     this.test_minter_lock();
-    // prepare params
+    // PEPE-WBNB gauge at PCS
     address[] memory gauges = new address[](1);
     gauges[0] = address(0xdD82975ab85E745c84e497FD75ba409Ec02d4739);
     uint256[] memory weights = new uint256[](1);
@@ -169,6 +178,39 @@ contract UniversalProxyTest is Test {
   function test_claim_veToken_rewards() public {
     vm.prank(bot);
     universalProxy.claimVeTokenRewards();
+    // rewardDistributionScheduler should receive tokens
+    assertEq(
+      token.balanceOf(address(rewardDistributionScheduler)),
+      20 ether // 10 ethers from each revenueSharingPool
+    );
+  }
+
+  function test_deposit_IFO() public {
+    deal(address(token), admin, 1000 ether);
+    // participant ifo
+    vm.startPrank(admin);
+    token.safeIncreaseAllowance(address(universalProxy), 100 ether);
+    universalProxy.depositIFO(pid, 100 ether);
+    vm.stopPrank();
+  }
+
+  function test_harvest_IFO() public {
+    // participant ifo
+    vm.prank(admin);
+    universalProxy.harvestIFO(pid, address(ifoToken));
+    // TON token should be transferred to admin
+    assertEq(IERC20(ifoToken).balanceOf(admin), 1000 ether);
+  }
+
+  function test_claim_from_stakeDao() public {
+    uint256[] memory bountyIds = new uint256[](1);
+    bountyIds[0] = 1;
+    vm.startPrank(admin);
+    universalProxy.setRecipient(recipient);
+    universalProxy.claimRewardsFromStakeDao(bountyIds);
+    vm.stopPrank();
+    // cake platform will distribute 10 tokens to each recipient
+    assertEq(token.balanceOf(recipient), 10 ether);
   }
 
 }
