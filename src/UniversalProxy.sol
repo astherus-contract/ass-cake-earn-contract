@@ -134,7 +134,9 @@ contract UniversalProxy is
    * @dev token will be transferred from MINTER
    * @param amount - amount to lock
    */
-  function lock(uint256 amount) external override onlyRole(MINTER) {
+  function lock(
+    uint256 amount
+  ) external override onlyRole(MINTER) whenNotPaused {
     require(amount > 0, "value must greater than 0");
     // transfer token from minter to this contract
     token.safeTransferFrom(msg.sender, address(this), amount);
@@ -165,7 +167,7 @@ contract UniversalProxy is
    */
   function extendLock(
     uint256 unlockTime
-  ) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+  ) external override onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
     require(unlockTime > 0, "unlock time must greater than 0");
     veToken.increaseUnlockTime(unlockTime);
     emit LockExtended(unlockTime);
@@ -189,7 +191,7 @@ contract UniversalProxy is
     uint256[] memory chainIds,
     bool skipNative,
     bool skipProxy
-  ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
     // @TODO shall we add more checks here?
     gaugeVoting.voteForGaugeWeightsBulk(
       gaugeAddrs,
@@ -206,7 +208,7 @@ contract UniversalProxy is
    *      for more info of PCS's voting, plz refer to:
    *      https://developer.pancakeswap.finance/contracts/vecake-and-gauge-voting
    */
-  function claimVeTokenRewards() external onlyRole(BOT) {
+  function claimVeTokenRewards() external onlyRole(BOT) whenNotPaused {
     uint256 totalClaimed = 0;
     for (uint256 i = 0; i < revenueSharingPools.length; ++i) {
       totalClaimed += IRevenueSharingPool(revenueSharingPools[i]).claimForUser(
@@ -239,7 +241,7 @@ contract UniversalProxy is
   function depositIFO(
     uint8 pid,
     uint256 amount
-  ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
     require(amount > 0, "amount must be greater than 0");
     require(pid >= 0, "invalid pid");
     // save how much token is deposited
@@ -261,7 +263,7 @@ contract UniversalProxy is
   function harvestIFO(
     uint8 pid,
     address rewardToken
-  ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
     // get harvested token from IFO
     IIFOV8(ifo).harvestPool(pid);
     // not all tokens are exchanged to IFO tokens
@@ -290,7 +292,7 @@ contract UniversalProxy is
    */
   function setRecipient(
     address recipient
-  ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
     // recipient can be zero address
     // if zero address is set, then msg.sender will be used as recipient
     cakePlatform.setRecipient(recipient);
@@ -303,7 +305,9 @@ contract UniversalProxy is
    *      StakeDao's CakePlatform (please refer to it's vote market)
    * @param ids - Bounty IDs
    */
-  function claimRewardsFromStakeDao(uint256[] calldata ids) external {
+  function claimRewardsFromStakeDao(
+    uint256[] calldata ids
+  ) external whenNotPaused {
     // claim rewards from multiple bounties
     cakePlatform.claimAllFor(address(this), ids);
   }
