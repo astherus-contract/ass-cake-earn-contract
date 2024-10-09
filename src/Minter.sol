@@ -63,21 +63,21 @@ contract Minter is
   address public universalProxy;
 
   /* ============ Events ============ */
-  event smartMinted(address user, uint256 cakeInput, uint256 obtainedAssCake);
-  event rewardsCompounded(
+  event SmartMinted(address user, uint256 cakeInput, uint256 obtainedAssCake);
+  event RewardsCompounded(
     address sender,
     RewardsType rewardsType,
     uint256 amountIn,
     uint256 lockAmount,
     uint256 fee
   );
-  event feeRateUpdated(
+  event FeeRateUpdated(
     address sender,
     RewardsType rewardsType,
     uint256 oldFeeRate,
     uint256 newFeeRate
   );
-  event feeWithdrawn(address sender, address receipt, uint256 amountIn);
+  event FeeWithdrawn(address sender, address receipt, uint256 amountIn);
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -131,7 +131,7 @@ contract Minter is
     uint256 _amountIn,
     uint256 _mintRatio
   ) public view returns (uint256 minimumEstimatedTotal) {
-    require(_mintRatio > DENOMINATOR, "Incorrect Ratio");
+    require(_mintRatio <= DENOMINATOR, "Incorrect Ratio");
 
     uint256 buybackAmount = _amountIn -
       ((_amountIn * _mintRatio) / DENOMINATOR);
@@ -157,7 +157,7 @@ contract Minter is
 
   function convertToTokens(uint256 assTokens) public view returns (uint256) {
     uint256 totalSupply = assToken.totalSupply();
-    if (totalSupply == 0) {
+    if (totalSupply == 0 || totalTokens == 0) {
       return assTokens;
     }
     return (assTokens * totalTokens) / totalSupply;
@@ -165,7 +165,7 @@ contract Minter is
 
   function convertToAssTokens(uint256 tokens) public view returns (uint256) {
     uint256 totalSupply = assToken.totalSupply();
-    if (totalSupply == 0) {
+    if (totalSupply == 0 || totalTokens == 0) {
       return tokens;
     }
     return (tokens * totalSupply) / totalTokens;
@@ -216,7 +216,7 @@ contract Minter is
     IERC20(token).safeIncreaseAllowance(universalProxy, lockAmount);
     IUniversalProxy(universalProxy).lock(lockAmount);
 
-    emit rewardsCompounded(
+    emit RewardsCompounded(
       msg.sender,
       _rewardsType,
       _amountIn,
@@ -235,11 +235,9 @@ contract Minter is
 
     uint256 assTokens = convertToAssTokens(_amountIn);
 
-    uint256 oldBalance = assToken.balanceOf(address(this));
     assToken.mint(address(this), assTokens);
-    uint256 newBalance = assToken.balanceOf(address(this));
 
-    return (newBalance - oldBalance);
+    return assTokens;
   }
 
   /**
@@ -316,7 +314,7 @@ contract Minter is
       oldFeeRate = donateRewardsFeeRate;
       donateRewardsFeeRate = _feeRate;
     }
-    emit feeRateUpdated(msg.sender, _rewardsType, oldFeeRate, _feeRate);
+    emit FeeRateUpdated(msg.sender, _rewardsType, oldFeeRate, _feeRate);
   }
 
   function withdrawFee(
@@ -329,7 +327,7 @@ contract Minter is
 
     IERC20(token).safeTransfer(receipt, amountIn);
     totalFee -= amountIn;
-    emit feeWithdrawn(msg.sender, receipt, amountIn);
+    emit FeeWithdrawn(msg.sender, receipt, amountIn);
   }
 
   // /* ============ Internal Functions ============ */
@@ -366,7 +364,7 @@ contract Minter is
 
     IERC20(assToken).safeTransfer(msg.sender, amountRec);
 
-    emit smartMinted(msg.sender, _amountIn, amountRec);
+    emit SmartMinted(msg.sender, _amountIn, amountRec);
 
     return amountRec;
   }

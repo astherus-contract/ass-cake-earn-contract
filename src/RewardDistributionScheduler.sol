@@ -34,9 +34,11 @@ contract RewardDistributionScheduler is
   IERC20 public token;
   address public minter;
   mapping(uint256 => mapping(IMinter.RewardsType => uint256)) public epochs;
+  //last time to distribute rewards
+  uint256 public lastDistributeRewardsTimestamp;
 
   /* ============ Events ============ */
-  event rewardsScheduleAdded(
+  event RewardsScheduleAdded(
     address sender,
     IMinter.RewardsType rewardsType,
     uint256 amount,
@@ -73,6 +75,7 @@ contract RewardDistributionScheduler is
 
     token = IERC20(_token);
     minter = _minter;
+    lastDistributeRewardsTimestamp = (block.timestamp / 1 days) * 1 days;
   }
 
   // /* ============ External Functions ============ */
@@ -89,12 +92,16 @@ contract RewardDistributionScheduler is
 
     uint256 startTime = (_startTime / 1 days) * 1 days;
 
+    if (startTime < lastDistributeRewardsTimestamp) {
+      lastDistributeRewardsTimestamp = startTime;
+    }
+
     token.safeTransferFrom(msg.sender, address(this), _amount);
     uint256 amountPerDay = _amount / _epochs;
     for (uint256 i; i < _epochs; i++) {
       epochs[startTime + i * 1 days][_rewardsType] += amountPerDay;
     }
-    emit rewardsScheduleAdded(
+    emit RewardsScheduleAdded(
       msg.sender,
       _rewardsType,
       _amount,
@@ -109,21 +116,24 @@ contract RewardDistributionScheduler is
     onlyRole(BOT)
     nonReentrant
   {
-    uint256 lastTimestamp = (block.timestamp / 1 days) * 1 days;
+    uint256 currentTimestamp = (block.timestamp / 1 days) * 1 days;
     uint max = (uint)(type(IMinter.RewardsType).max);
 
-    for (uint256 i; i < 7; i++) {
-      lastTimestamp -= i * 1 days;
+    while (lastDistributeRewardsTimestamp <= currentTimestamp) {
       for (uint j; j < max; j++) {
-        if (epochs[lastTimestamp][IMinter.RewardsType(j)] != 0) {
-          uint256 amount = epochs[lastTimestamp][IMinter.RewardsType(j)];
+        if (
+          epochs[lastDistributeRewardsTimestamp][IMinter.RewardsType(j)] != 0
+        ) {
+          uint256 amount = epochs[lastDistributeRewardsTimestamp][
+            IMinter.RewardsType(j)
+          ];
           IERC20(token).safeIncreaseAllowance(minter, amount);
 
-          delete epochs[lastTimestamp][IMinter.RewardsType(j)];
+          delete epochs[lastDistributeRewardsTimestamp][IMinter.RewardsType(j)];
           IMinter(minter).compoundRewards(IMinter.RewardsType(j), amount);
         }
       }
-      //      delete epochs[lastTimestamp];
+      lastDistributeRewardsTimestamp += 1 days;
     }
   }
 
