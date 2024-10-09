@@ -219,7 +219,12 @@ contract UniversalProxy is
    *      for more info of PCS's voting, plz refer to:
    *      https://developer.pancakeswap.finance/contracts/vecake-and-gauge-voting
    */
-  function claimVeTokenRewards() external onlyRole(BOT) whenNotPaused {
+  function claimVeTokenRewards()
+    external
+    onlyRole(BOT)
+    whenNotPaused
+    nonReentrant
+  {
     // we won't use revenueSharingPoolGateway here
     // as it didn't return the claimed amount
     uint256 totalClaimed = 0;
@@ -276,7 +281,7 @@ contract UniversalProxy is
   function harvestIFO(
     uint8 pid,
     address rewardToken
-  ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
+  ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused nonReentrant {
     // get harvested token from IFO
     IIFOV8(ifo).harvestPool(pid);
     // not all tokens are exchanged to IFO tokens
