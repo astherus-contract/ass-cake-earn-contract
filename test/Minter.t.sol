@@ -15,6 +15,7 @@ contract MinterTest is Test {
   AssToken public assToken;
   MockPancakeStableSwapRouter public swapRouter;
   MockPancakeStableSwapPool public swapPool;
+  address manager = makeAddr("MANAGER");
   address public admin = address(0xACC0);
   address public user1 = address(0xACC1);
   address public user2 = address(0xACC2);
@@ -60,6 +61,7 @@ contract MinterTest is Test {
         Minter.initialize,
         (
           admin,
+          manager,
           address(token),
           assTokenProxy,
           address(swapRouter),

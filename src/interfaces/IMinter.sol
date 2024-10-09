@@ -10,7 +10,9 @@ interface IMinter {
     Donate
   }
 
-  function initialize(address _admin,
+  function initialize(
+    address _admin,
+    address _manager,
     address _token,
     address _assToken,
     address _universalProxy,

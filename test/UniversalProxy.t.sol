@@ -16,7 +16,7 @@ import { MockCakePlatform } from "../src/mock/stakeDao/MockCakePlatform.sol";
 import { MockRevenueSharingPool } from "../src/mock/pancakeswap/MockRevenueSharingPool.sol";
 
 /** cmd:
- forge clean && \
+ forge clean &&
  forge build --via-ir && \
  forge test -vvvv --match-contract UniversalProxyTest --via-ir
 */
@@ -49,7 +49,6 @@ contract UniversalProxyTest is Test {
   UniversalProxy universalProxy;
   address[] revenueSharingPools;
   address cakePlatform;
-  uint256 maxLockDuration;
   // For IFO, we set IFO token as TON for example
   uint8 pid = 1;
   address ifoToken = 0x76A797A59Ba2C17726896976B7B3747BfD1d220f;
@@ -77,7 +76,7 @@ contract UniversalProxyTest is Test {
       "RewardDistributionScheduler.sol",
       abi.encodeCall(
         RewardDistributionScheduler.initialize,
-        (admin, address(token), minter)
+        (admin, address(token), minter, manager)
       )
     );
     rewardDistributionScheduler = RewardDistributionScheduler(
@@ -119,7 +118,6 @@ contract UniversalProxyTest is Test {
           address(ifo),
           address(rewardDistributionScheduler),
           revenueSharingPools,
-          365 * 86400,
           address(cakePlatform)
         )
       )

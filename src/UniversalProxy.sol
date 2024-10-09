@@ -54,8 +54,9 @@ contract UniversalProxy is
   // lock created flag
   // @TODO use flag instead of checking on veCake contract should use less gas?
   bool public lockCreated;
-  // maximum lock duration
-  uint256 public maxLockDuration;
+  // maximum lock duration = 4 years - 1s (same as PCS)
+  uint256 public constant WEEK = 7 days;
+  uint256 public constant maxLockDuration = (209 * WEEK) - 1;
 
   /* ============ Events ============ */
   event LockIncreased(uint256 value);
@@ -64,7 +65,6 @@ contract UniversalProxy is
   event IFODeposited(uint8 pid, uint256 amount);
   event IFOHarvested(uint8 pid, address rewardToken, uint256 amount);
   event RevenuePoolIdsSet(address[] poolIds);
-  event MaxLockDurationSet(uint256 maxLockDuration);
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -84,7 +84,6 @@ contract UniversalProxy is
    * @param _ifo - Address of the ifo
    * @param _rewardDistributionScheduler - Address of the rewardDistributionScheduler
    * @param _revenueSharingPools - Array of revenue sharing pools
-   * @param _maxLockDuration - Maximum lock duration
    * @param _cakePlatform - Address of the cakePlatform
    */
   function initialize(
@@ -99,7 +98,6 @@ contract UniversalProxy is
     address _ifo,
     address _rewardDistributionScheduler,
     address[] memory _revenueSharingPools,
-    uint256 _maxLockDuration,
     address _cakePlatform
   ) external initializer {
     require(_admin != address(0), "Invalid admin address");
@@ -134,7 +132,6 @@ contract UniversalProxy is
     rewardsDistributionScheduler = IRewardDistributionScheduler(
       _rewardDistributionScheduler
     );
-    maxLockDuration = _maxLockDuration;
     cakePlatform = ICakePlatform(_cakePlatform);
   }
 
@@ -207,7 +204,7 @@ contract UniversalProxy is
     uint256[] memory chainIds,
     bool skipNative,
     bool skipProxy
-  ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
+  ) external onlyRole(MANAGER) whenNotPaused {
     // @TODO shall we add more checks here?
     gaugeVoting.voteForGaugeWeightsBulk(
       gaugeAddrs,
@@ -264,7 +261,7 @@ contract UniversalProxy is
   function depositIFO(
     uint8 pid,
     uint256 amount
-  ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
+  ) external onlyRole(MANAGER) whenNotPaused {
     require(amount > 0, "amount must be greater than 0");
     require(pid >= 0, "invalid pid");
     // save how much token is deposited
@@ -286,7 +283,7 @@ contract UniversalProxy is
   function harvestIFO(
     uint8 pid,
     address rewardToken
-  ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused nonReentrant {
+  ) external onlyRole(MANAGER) whenNotPaused nonReentrant {
     // get harvested token from IFO
     IIFOV8(ifo).harvestPool(pid);
     // not all tokens are exchanged to IFO tokens
@@ -315,7 +312,7 @@ contract UniversalProxy is
    */
   function setRecipient(
     address recipient
-  ) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
+  ) external onlyRole(MANAGER) whenNotPaused {
     // recipient can be zero address
     // if zero address is set, then msg.sender will be used as recipient
     cakePlatform.setRecipient(recipient);
@@ -350,17 +347,6 @@ contract UniversalProxy is
   }
 
   /**
-   * @dev set maximum lock duration
-   * @param _maxLockDuration - maximum lock duration
-   */
-  function setMaxLockDuration(
-    uint256 _maxLockDuration
-  ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-    maxLockDuration = _maxLockDuration;
-    emit MaxLockDurationSet(_maxLockDuration);
-  }
-
-  /**
    * @dev Flips the pause state
    */
   function togglePause() external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -376,5 +362,5 @@ contract UniversalProxy is
 
   function _authorizeUpgrade(
     address newImplementation
-  ) internal override onlyRole(MANAGER) {}
+  ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }

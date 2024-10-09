@@ -15,6 +15,8 @@ contract MinterScript is Script {
     console.log("Deployer: %s", deployer);
     address admin = vm.envOr("ADMIN", deployer);
     console.log("Admin: %s", admin);
+    address manager = vm.envOr("MANAGER", deployer);
+    console.log("Manager: %s", manager);
     // token
     address token = vm.envAddress("TOKEN");
     require(token != address(0), "Token address cannot be null");
@@ -55,6 +57,7 @@ contract MinterScript is Script {
         Minter.initialize,
         (
           admin,
+          manager,
           token,
           assToken,
           universalProxy,

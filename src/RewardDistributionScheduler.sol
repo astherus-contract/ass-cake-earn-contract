@@ -24,6 +24,8 @@ contract RewardDistributionScheduler is
   bytes32 public constant BOT = keccak256("BOT");
   // pause role
   bytes32 public constant PAUSER = keccak256("PAUSER");
+  // manager role
+  bytes32 public constant MANAGER = keccak256("MANAGER");
   // denominator
   uint256 public constant DENOMINATOR = 10000;
 
@@ -52,11 +54,13 @@ contract RewardDistributionScheduler is
    * @param _admin - Address of the admin
    * @param _token - Address of the token
    * @param _minter - Address of the minter
+   * @param _manager - Address of the manager
    */
   function initialize(
     address _admin,
     address _token,
-    address _minter
+    address _minter,
+    address _manager
   ) external override initializer {
     require(_admin != address(0), "Invalid admin address");
     require(_token != address(0), "Invalid token address");
@@ -65,6 +69,7 @@ contract RewardDistributionScheduler is
     __Pausable_init();
     __ReentrancyGuard_init();
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+    _grantRole(MANAGER, _manager);
 
     token = IERC20(_token);
     minter = _minter;
@@ -77,7 +82,7 @@ contract RewardDistributionScheduler is
     uint256 _amount,
     uint256 _epochs,
     uint256 _startTime
-  ) external override onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+  ) external override onlyRole(MANAGER) nonReentrant {
     require(_amount > 0, "Invalid amount");
     require(_epochs > 0, "Invalid epochs");
     require(_startTime > 0, "Invalid startTime");

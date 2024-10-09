@@ -27,6 +27,8 @@ contract Minter is
   bytes32 public constant COMPOUNDER = keccak256("COMPOUNDER");
   // pause role
   bytes32 public constant PAUSER = keccak256("PAUSER");
+  // manager role
+  bytes32 public constant MANAGER = keccak256("MANAGER");
   // denominator
   uint256 public constant DENOMINATOR = 10000;
 
@@ -94,6 +96,7 @@ contract Minter is
    */
   function initialize(
     address _admin,
+    address _manager,
     address _token,
     address _assToken,
     address _universalProxy,
@@ -112,6 +115,7 @@ contract Minter is
     __Pausable_init();
     __ReentrancyGuard_init();
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+    _grantRole(MANAGER, _manager);
 
     token = IERC20(_token);
     assToken = IAssToken(_assToken);
@@ -283,7 +287,7 @@ contract Minter is
   function updateFeeRate(
     RewardsType _rewardsType,
     uint256 _feeRate
-  ) external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+  ) external nonReentrant onlyRole(MANAGER) {
     require(_feeRate <= DENOMINATOR, "Incorrect Fee Ratio");
 
     uint256 oldFeeRate = 0;
@@ -318,7 +322,7 @@ contract Minter is
   function withdrawFee(
     address receipt,
     uint256 amountIn
-  ) external nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+  ) external nonReentrant onlyRole(MANAGER) {
     require(receipt != address(0), "Invalid address");
     require(amountIn > 0, "Invalid amount");
     require(amountIn <= totalFee, "Invalid amount");
