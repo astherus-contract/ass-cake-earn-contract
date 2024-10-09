@@ -30,6 +30,8 @@ contract UniversalProxy is
   bytes32 public constant MINTER = keccak256("MINTER");
   // bot role
   bytes32 public constant BOT = keccak256("BOT");
+  // manager role
+  bytes32 public constant MANAGER = keccak256("MANAGER");
 
   /* ============ State Variables ============ */
   // token address
@@ -75,6 +77,7 @@ contract UniversalProxy is
    * @param _pauser - Address of the pauser
    * @param _minter - Address of the minter
    * @param _bot - Address of the bot
+   * @param _manager - Address of the manager
    * @param _token - Address of the token
    * @param _veToken - Address of the veToken
    * @param _gaugeVoting - Address of the gaugeVoting
@@ -89,6 +92,7 @@ contract UniversalProxy is
     address _pauser,
     address _minter,
     address _bot,
+    address _manager,
     address _token,
     address _veToken,
     address _gaugeVoting,
@@ -119,6 +123,7 @@ contract UniversalProxy is
     _grantRole(PAUSER, _pauser);
     _grantRole(MINTER, _minter);
     _grantRole(BOT, _bot);
+    _grantRole(MANAGER, _manager);
 
     lockCreated = false;
     token = IERC20(_token);
@@ -371,5 +376,5 @@ contract UniversalProxy is
 
   function _authorizeUpgrade(
     address newImplementation
-  ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+  ) internal override onlyRole(MANAGER) {}
 }

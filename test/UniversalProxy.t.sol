@@ -33,6 +33,7 @@ contract UniversalProxyTest is Test {
   address minter = makeAddr("MINTER");
   address pauser = makeAddr("PAUSER");
   address bot = makeAddr("BOT");
+  address manager = makeAddr("MANAGER");
   address recipient = makeAddr("RECIPIENT");
   // BSC CAKE
   IERC20 token = IERC20(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
@@ -111,6 +112,7 @@ contract UniversalProxyTest is Test {
           pauser,
           minter,
           bot,
+          manager,
           address(token),
           address(veToken),
           address(gaugeVoting),
