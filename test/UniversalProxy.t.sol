@@ -172,7 +172,7 @@ contract UniversalProxyTest is Test {
     chainIds[0] = 56;
     // case vote
     vm.prank(admin);
-    universalProxy.caseVote(gauges, weights, chainIds, false, false);
+    universalProxy.castVote(gauges, weights, chainIds, false, false);
   }
 
   function test_claim_veToken_rewards() public {

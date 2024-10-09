@@ -72,6 +72,17 @@ contract UniversalProxy is
   /**
    * @dev initialize the contract
    * @param _admin - Address of the admin
+   * @param _pauser - Address of the pauser
+   * @param _minter - Address of the minter
+   * @param _bot - Address of the bot
+   * @param _token - Address of the token
+   * @param _veToken - Address of the veToken
+   * @param _gaugeVoting - Address of the gaugeVoting
+   * @param _ifo - Address of the ifo
+   * @param _rewardDistributionScheduler - Address of the rewardDistributionScheduler
+   * @param _revenueSharingPools - Array of revenue sharing pools
+   * @param _maxLockDuration - Maximum lock duration
+   * @param _cakePlatform - Address of the cakePlatform
    */
   function initialize(
     address _admin,
@@ -161,13 +172,13 @@ contract UniversalProxy is
   }
 
   /**
-   * @dev extend the lock duration in case `increaseLock` is not called
+   * @dev extend the lock duration in case lock() is not called
    *      for a long time and the lock duration is about to expire
    * @param unlockTime - new unlock time
    */
   function extendLock(
     uint256 unlockTime
-  ) external override onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
+  ) external override onlyRole(BOT) whenNotPaused {
     require(unlockTime > 0, "unlock time must greater than 0");
     veToken.increaseUnlockTime(unlockTime);
     emit LockExtended(unlockTime);
@@ -178,14 +189,14 @@ contract UniversalProxy is
   // ------------------------------ //
 
   /**
-   * @dev case vote for gauge weights
+   * @dev cast vote for gauge weights
    * @param gaugeAddrs - array of gauge addresses
    * @param userWeights - array of user weights
    * @param chainIds - array of chain ids
    * @param skipNative - skip native chain
    * @param skipProxy - skip proxy chain
    */
-  function caseVote(
+  function castVote(
     address[] memory gaugeAddrs,
     uint256[] memory userWeights,
     uint256[] memory chainIds,
@@ -209,6 +220,8 @@ contract UniversalProxy is
    *      https://developer.pancakeswap.finance/contracts/vecake-and-gauge-voting
    */
   function claimVeTokenRewards() external onlyRole(BOT) whenNotPaused {
+    // we won't use revenueSharingPoolGateway here
+    // as it didn't return the claimed amount
     uint256 totalClaimed = 0;
     for (uint256 i = 0; i < revenueSharingPools.length; ++i) {
       totalClaimed += IRevenueSharingPool(revenueSharingPools[i]).claimForUser(
