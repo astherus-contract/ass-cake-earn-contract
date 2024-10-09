@@ -128,7 +128,7 @@ contract UniversalProxyTest is Test {
     // grant universalProxy as admin of rewardDistributionScheduler
     vm.startPrank(admin);
     rewardDistributionScheduler.grantRole(
-      rewardDistributionScheduler.DEFAULT_ADMIN_ROLE(),
+      rewardDistributionScheduler.MANAGER(),
       address(universalProxy)
     );
     vm.stopPrank();
@@ -171,7 +171,7 @@ contract UniversalProxyTest is Test {
     uint256[] memory chainIds = new uint256[](1);
     chainIds[0] = 56;
     // case vote
-    vm.prank(admin);
+    vm.prank(manager);
     universalProxy.castVote(gauges, weights, chainIds, false, false);
   }
 
@@ -186,9 +186,9 @@ contract UniversalProxyTest is Test {
   }
 
   function test_deposit_IFO() public {
-    deal(address(token), admin, 1000 ether);
+    deal(address(token), manager, 1000 ether);
     // participant ifo
-    vm.startPrank(admin);
+    vm.startPrank(manager);
     token.safeIncreaseAllowance(address(universalProxy), 100 ether);
     universalProxy.depositIFO(pid, 100 ether);
     vm.stopPrank();
@@ -196,16 +196,16 @@ contract UniversalProxyTest is Test {
 
   function test_harvest_IFO() public {
     // participant ifo
-    vm.prank(admin);
+    vm.prank(manager);
     universalProxy.harvestIFO(pid, address(ifoToken));
     // TON token should be transferred to admin
-    assertEq(IERC20(ifoToken).balanceOf(admin), 1000 ether);
+    assertEq(IERC20(ifoToken).balanceOf(manager), 1000 ether);
   }
 
   function test_claim_from_stakeDao() public {
     uint256[] memory bountyIds = new uint256[](1);
     bountyIds[0] = 1;
-    vm.startPrank(admin);
+    vm.startPrank(manager);
     universalProxy.setRecipient(recipient);
     universalProxy.claimRewardsFromStakeDao(bountyIds);
     vm.stopPrank();
