@@ -19,6 +19,7 @@ contract AssToken is
   /* ============ Events ============ */
   event SetMinter(address indexed _address);
 
+  /* ============ Constructor ============ */
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
@@ -53,9 +54,9 @@ contract AssToken is
     _;
   }
 
-  /* ============ External Functions ============ */
+  /* ============ External Authorize Functions ============ */
   /**
-   * @dev Mint new tokens
+   * @dev Mint new tokens, only minter can call this function
    * @param _account - Address of the account
    * @param _amount - Amount of tokens to mint
    */
@@ -66,6 +67,7 @@ contract AssToken is
     _mint(_account, _amount);
   }
 
+  /* ============ Admin Functions ============ */
   /**
    * @dev Set the minter
    * @param _address - Address of the minter
@@ -77,6 +79,7 @@ contract AssToken is
     emit SetMinter(_address);
   }
 
+  /* ============ Internal Functions ============ */
   function _authorizeUpgrade(
     address newImplementation
   ) internal override onlyOwner {}
