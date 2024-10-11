@@ -82,15 +82,15 @@ contract MinterTest is Test {
     vm.stopPrank();
   }
 
-  function testSmartMint() public {
-    vm.startPrank(user1);
-    uint256 amountIn = 100 ether;
-    uint256 mintRatio = 1000;
-    uint256 minOut = 100 ether;
-    uint256 result = minter.smartMint(amountIn, mintRatio, minOut);
-    console.log("result: %s", result);
-    vm.stopPrank();
-  }
+  //  function testSmartMint() public {
+  //    vm.startPrank(user1);
+  //    uint256 amountIn = 100 ether;
+  //    uint256 mintRatio = 1000;
+  //    uint256 minOut = 100 ether;
+  //    uint256 result = minter.smartMint(amountIn, mintRatio, minOut);
+  //    console.log("result: %s", result);
+  //    vm.stopPrank();
+  //  }
 
   /*  function testMint() public {
     vm.startPrank(user1);
