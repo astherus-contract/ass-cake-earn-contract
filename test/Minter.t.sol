@@ -128,7 +128,7 @@ contract MinterTest is Test {
   function testSmartMint() public {
     vm.startPrank(user1);
     uint256 amountIn = 100 ether;
-    uint256 mintRatio = 1000;
+    uint256 mintRatio = 10000;
     uint256 minOut = 100 ether;
     token.approve(address(minter), amountIn);
     uint256 result = minter.smartMint(amountIn, mintRatio, minOut);
