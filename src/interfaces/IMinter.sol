@@ -13,6 +13,7 @@ interface IMinter {
   function initialize(
     address _admin,
     address _manager,
+    address _pauser,
     address _token,
     address _assToken,
     address _universalProxy,
