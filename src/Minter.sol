@@ -53,31 +53,44 @@ contract Minter is
   uint256 public donateRewardsFeeRate;
   // total totalFee
   uint256 public totalFee;
-  // swap router
-  address public swapRouter;
-  // swap pool
-  address public swapPool;
+  // pancake swap router
+  address public pancakeSwapRouter;
+  // pancake swap pool
+  address public pancakeSwapPool;
   // max swap ratio
   uint256 public maxSwapRatio;
   //universal Proxy
   address public universalProxy;
 
   /* ============ Events ============ */
-  event SmartMinted(address user, uint256 cakeInput, uint256 obtainedAssCake);
+  event SmartMinted(
+    address indexed user,
+    uint256 cakeInput,
+    uint256 obtainedAssCake
+  );
   event RewardsCompounded(
-    address sender,
+    address indexed sender,
     RewardsType rewardsType,
     uint256 amountIn,
     uint256 lockAmount,
     uint256 fee
   );
   event FeeRateUpdated(
-    address sender,
+    address indexed sender,
     RewardsType rewardsType,
     uint256 oldFeeRate,
     uint256 newFeeRate
   );
-  event FeeWithdrawn(address sender, address receipt, uint256 amountIn);
+  event FeeWithdrawn(address indexed sender, address receipt, uint256 amountIn);
+  event PancakeSwapRouterChanged(
+    address indexed sender,
+    address indexed pancakeSwapRouter
+  );
+  event PancakeSwapPoolChanged(
+    address indexed sender,
+    address indexed pancakeSwapPool
+  );
+  event MaxSwapRatioChanged(address indexed sender, uint256 maxSwapRatio);
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -92,8 +105,8 @@ contract Minter is
    * @param _token - Address of the token
    * @param _assToken - Address of the assToken
    * @param _universalProxy - Address of the universalProxy
-   * @param _swapRouter - Address of swap router
-   * @param _swapPool - Address of swap pool
+   * @param _pancakeSwapRouter - Address of swap router
+   * @param _pancakeSwapPool - Address of swap pool
    * @param _maxSwapRatio - Max swap ratio
    */
   function initialize(
@@ -103,8 +116,8 @@ contract Minter is
     address _token,
     address _assToken,
     address _universalProxy,
-    address _swapRouter,
-    address _swapPool,
+    address _pancakeSwapRouter,
+    address _pancakeSwapPool,
     uint256 _maxSwapRatio
   ) external override initializer {
     require(_admin != address(0), "Invalid admin address");
@@ -113,8 +126,14 @@ contract Minter is
     require(_token != address(0), "Invalid token address");
     require(_assToken != address(0), "Invalid AssToken address");
     require(_universalProxy != address(0), "Invalid universalProxy address");
-    require(_swapRouter != address(0), "Invalid swap router address");
-    require(_swapPool != address(0), "Invalid swap pool address");
+    require(
+      _pancakeSwapRouter != address(0),
+      "Invalid pancake swap router address"
+    );
+    require(
+      _pancakeSwapPool != address(0),
+      "Invalid pancake swap pool address"
+    );
     require(_maxSwapRatio <= DENOMINATOR, "Invalid max swap ratio");
 
     __Pausable_init();
@@ -126,8 +145,8 @@ contract Minter is
     token = IERC20(_token);
     assToken = IAssToken(_assToken);
     universalProxy = _universalProxy;
-    swapRouter = _swapRouter;
-    swapPool = _swapPool;
+    pancakeSwapRouter = _pancakeSwapRouter;
+    pancakeSwapPool = _pancakeSwapPool;
     maxSwapRatio = _maxSwapRatio;
   }
 
@@ -145,7 +164,11 @@ contract Minter is
     uint256 amountOut = 0;
 
     if (buybackAmount > 0) {
-      amountOut += IPancakeStableSwapPool(swapPool).get_dy(0, 1, buybackAmount);
+      amountOut += IPancakeStableSwapPool(pancakeSwapPool).get_dy(
+        0,
+        1,
+        buybackAmount
+      );
     }
 
     if (mintAmount > 0) {
@@ -157,7 +180,11 @@ contract Minter is
 
   function currentSwapRatio() public view returns (uint256) {
     // 1 assCAKE=currentSwapRatio CAKE
-    uint256 amountOut = IPancakeStableSwapPool(swapPool).get_dy(1, 0, 1e18);
+    uint256 amountOut = IPancakeStableSwapPool(pancakeSwapPool).get_dy(
+      1,
+      0,
+      1e18
+    );
     return (amountOut * DENOMINATOR) / 1e18;
   }
 
@@ -257,10 +284,10 @@ contract Minter is
     uint256[] memory flag = new uint256[](1);
     flag[0] = 2;
 
-    token.safeIncreaseAllowance(swapRouter, _amountIn);
+    token.safeIncreaseAllowance(pancakeSwapRouter, _amountIn);
 
     uint256 oldBalance = assToken.balanceOf(address(this));
-    IPancakeStableSwapRouter(swapRouter).exactInputStableSwap(
+    IPancakeStableSwapRouter(pancakeSwapRouter).exactInputStableSwap(
       tokenPath,
       flag,
       _amountIn,
@@ -336,6 +363,60 @@ contract Minter is
     emit FeeWithdrawn(msg.sender, receipt, amountIn);
   }
 
+  /**
+   * @dev changePancakeSwapRouter
+   * @param _pancakeSwapRouter - Address of the pancakeSwapRouter
+   */
+  function changePancakeSwapRouter(
+    address _pancakeSwapRouter
+  ) external onlyRole(MANAGER) {
+    require(
+      _pancakeSwapRouter != address(0),
+      "_pancakeSwapRouter is the zero address"
+    );
+    require(
+      _pancakeSwapRouter != pancakeSwapRouter,
+      "_pancakeSwapRouter is the same"
+    );
+
+    pancakeSwapRouter = _pancakeSwapRouter;
+    emit PancakeSwapRouterChanged(msg.sender, _pancakeSwapRouter);
+  }
+
+  /**
+   * @dev changePancakeSwapPool
+   * @param _pancakeSwapPool - Address of the pancakeSwapPool
+   */
+  function changePancakeSwapPool(
+    address _pancakeSwapPool
+  ) external onlyRole(MANAGER) {
+    require(
+      _pancakeSwapPool != address(0),
+      "_pancakeSwapPool is the zero address"
+    );
+    require(
+      _pancakeSwapPool != pancakeSwapPool,
+      "_pancakeSwapPool is the same"
+    );
+
+    pancakeSwapPool = _pancakeSwapPool;
+    emit PancakeSwapPoolChanged(msg.sender, _pancakeSwapPool);
+  }
+
+  /**
+   * @dev changeMaxSwapRatio
+   * @param _maxSwapRatio - Address of the maxSwapRatio
+   */
+  function changeMaxSwapRatio(
+    uint256 _maxSwapRatio
+  ) external onlyRole(MANAGER) {
+    require(_maxSwapRatio <= DENOMINATOR, "Invalid max swap ratio");
+    require(_maxSwapRatio != maxSwapRatio, "_maxSwapRatio is the same");
+
+    maxSwapRatio = _maxSwapRatio;
+    emit MaxSwapRatioChanged(msg.sender, _maxSwapRatio);
+  }
+
   // /* ============ Internal Functions ============ */
 
   function _authorizeUpgrade(
@@ -348,7 +429,7 @@ contract Minter is
     uint256 _minOut
   ) internal returns (uint256) {
     require(_amountIn > 0, "Invalid amount");
-    require(_mintRatio <= DENOMINATOR, "Incorrect Ratio");
+    require(_mintRatio <= maxSwapRatio, "Incorrect Ratio");
 
     token.safeTransferFrom(msg.sender, address(this), _amountIn);
 

@@ -39,6 +39,9 @@ $ forge test
 ```shell
 forge test --match-contract MinterTest -vvvvv --via-ir 
 forge clean && forge test --match-contract MinterTest -vvvvv
+forge clean && forge test --match-contract BuybackTest -vvv --via-ir
+forge clean && forge test --match-contract BuybackTest --match-test "testBuybackSuccess" -vvvv --via-ir
+forge clean && forge test --match-contract BuybackTest --match-test "testBuybackFail" -vvvv --via-ir
 ```
 
 ### Format

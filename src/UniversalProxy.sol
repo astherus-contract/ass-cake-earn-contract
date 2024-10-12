@@ -56,7 +56,7 @@ contract UniversalProxy is
   bool public lockCreated;
   // maximum lock duration = 4 years - 1s (same as PCS)
   uint256 public constant WEEK = 7 days;
-  uint256 public constant maxLockDuration = (209 * WEEK) - 1;
+  uint256 public constant MAX_LOCK_DURATION = (209 * WEEK) - 1;
 
   /* ============ Events ============ */
   event LockIncreased(uint256 value);
@@ -153,20 +153,20 @@ contract UniversalProxy is
     require(amount > 0, "value must greater than 0");
     // transfer token from minter to this contract
     token.safeTransferFrom(msg.sender, address(this), amount);
+    token.safeIncreaseAllowance(address(veToken), amount);
     // create lock if not created
     if (!lockCreated) {
-      token.safeIncreaseAllowance(address(veToken), amount);
-      veToken.createLock(amount, block.timestamp + maxLockDuration);
+      veToken.createLock(amount, block.timestamp + MAX_LOCK_DURATION);
       lockCreated = true;
     } else {
       // increase lock amount
       veToken.increaseLockAmount(amount);
       // get new unlock time
-      uint256 newUnlockTime = block.timestamp + maxLockDuration;
+      uint256 newUnlockTime = block.timestamp + MAX_LOCK_DURATION;
       // get lock end time
-      (, , , , uint48 lockEndTime, , , ) = veToken.getUserInfo(address(this));
+      (, uint256 end, , , , , , ) = veToken.getUserInfo(address(this));
       // increase unlock time if new unlock time is greater than lock end time
-      if (((newUnlockTime / 1 weeks) * 1 weeks) > lockEndTime) {
+      if (((newUnlockTime / 1 weeks) * 1 weeks) > end) {
         veToken.increaseUnlockTime(newUnlockTime);
       }
     }
@@ -176,14 +176,17 @@ contract UniversalProxy is
   /**
    * @dev extend the lock duration in case lock() is not called
    *      for a long time and the lock duration is about to expire
-   * @param unlockTime - new unlock time
    */
-  function extendLock(
-    uint256 unlockTime
-  ) external override onlyRole(BOT) whenNotPaused {
-    require(unlockTime > 0, "unlock time must greater than 0");
-    veToken.increaseUnlockTime(unlockTime);
-    emit LockExtended(unlockTime);
+  function extendLock() external override onlyRole(BOT) whenNotPaused {
+    // get new unlock time
+    uint256 newUnlockTime = block.timestamp + MAX_LOCK_DURATION;
+    // get lock end time
+    (, uint256 end, , , , , , ) = veToken.getUserInfo(address(this));
+    // increase unlock time if new unlock time is greater than lock end time
+    if (((newUnlockTime / 1 weeks) * 1 weeks) > end) {
+      veToken.increaseUnlockTime(newUnlockTime);
+      emit LockExtended(newUnlockTime);
+    }
   }
 
   // ------------------------------ //
