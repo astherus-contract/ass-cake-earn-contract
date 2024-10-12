@@ -100,6 +100,8 @@ contract Minter is
   /**
    * @dev initialize the contract
    * @param _admin - Address of the admin
+   * @param _manager - Address of the manager
+   * @param _pauser - Address of the pauser
    * @param _token - Address of the token
    * @param _assToken - Address of the assToken
    * @param _universalProxy - Address of the universalProxy
@@ -110,6 +112,7 @@ contract Minter is
   function initialize(
     address _admin,
     address _manager,
+    address _pauser,
     address _token,
     address _assToken,
     address _universalProxy,
@@ -118,6 +121,8 @@ contract Minter is
     uint256 _maxSwapRatio
   ) external override initializer {
     require(_admin != address(0), "Invalid admin address");
+    require(_manager != address(0), "Invalid manager address");
+    require(_pauser != address(0), "Invalid pauser address");
     require(_token != address(0), "Invalid token address");
     require(_assToken != address(0), "Invalid AssToken address");
     require(_universalProxy != address(0), "Invalid universalProxy address");
@@ -135,6 +140,7 @@ contract Minter is
     __ReentrancyGuard_init();
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(MANAGER, _manager);
+    _grantRole(PAUSER, _pauser);
 
     token = IERC20(_token);
     assToken = IAssToken(_assToken);

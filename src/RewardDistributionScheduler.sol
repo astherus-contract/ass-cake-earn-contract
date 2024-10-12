@@ -26,8 +26,6 @@ contract RewardDistributionScheduler is
   bytes32 public constant PAUSER = keccak256("PAUSER");
   // manager role
   bytes32 public constant MANAGER = keccak256("MANAGER");
-  // denominator
-  uint256 public constant DENOMINATOR = 10000;
 
   /* ============ State Variables ============ */
   // token address
