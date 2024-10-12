@@ -44,9 +44,22 @@ contract MockPancakeStableSwapPool is IPancakeStableSwapPool, IPancakeStableSwap
     if (i == 0 && j == 1) {
       return inputAmount * exchangeRate / 1e5;
     } else if (i == 1 && j == 0) {
-      return inputAmount / exchangeRate * 1e5;
+      return inputAmount * 1e5 / exchangeRate;
     }
     revert("MockPancakeStableSwapPool: INVALID_INDEX");
+  }
+
+  function get_amount_out(
+    address tokenIn,
+    address tokenOut,
+    uint256 inputAmount
+  ) public view returns (uint256 outputAmount) {
+    if (tokenIn == address(token0ERC20) && tokenOut == address(token1ERC20)) {
+      return get_dy(0, 1, inputAmount);
+    } else if (tokenIn == address(token1ERC20) && tokenOut == address(token0ERC20)) {
+      return get_dy(1, 0, inputAmount);
+    }
+    revert("MockPancakeStableSwapPool: INVALID_TOKEN");
   }
 
   function exactInputStableSwap(
@@ -57,9 +70,9 @@ contract MockPancakeStableSwapPool is IPancakeStableSwapPool, IPancakeStableSwap
     address to
   ) external payable override returns (uint256 amountOut) {
     IERC20(path[0]).safeTransferFrom(msg.sender, address(this), amountIn);
-    uint256 amountOut = get_dy(flag[0], flag[1], amountIn);
+    uint256 amountOut = get_amount_out(path[0], path[1], amountIn);
     require(amountOut >= amountOutMin, "MockPancakeStableSwapPool: INSUFFICIENT_OUTPUT_AMOUNT");
-    IERC20(path[1]).safeTransferFrom(address(this), to, amountOut);
+    IERC20(path[1]).safeTransfer(to, amountOut);
     return amountOut;
   }
 }

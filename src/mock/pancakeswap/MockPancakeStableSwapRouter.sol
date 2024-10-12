@@ -23,6 +23,6 @@ contract MockPancakeStableSwapRouter is IPancakeStableSwapRouter {
   ) external payable override returns (uint256 amountOut) {
     IERC20(path[0]).safeTransferFrom(msg.sender, address(this), amountIn);
     IERC20(path[0]).safeIncreaseAllowance(address(swapPool), amountIn);
-    return swapPool.exactInputStableSwap(path, flag, amountIn, amountOutMin, to);
+    amountOut = swapPool.exactInputStableSwap(path, flag, amountIn, amountOutMin, to);
   }
 }
