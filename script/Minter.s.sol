@@ -15,9 +15,9 @@ contract MinterScript is Script {
     console.log("Deployer: %s", deployer);
     address admin = vm.envOr("ADMIN", deployer);
     console.log("Admin: %s", admin);
-    address manager = vm.envOr("MANAGER", deployer);
+    address manager = vm.envOr("MANAGER", admin);
     console.log("Manager: %s", manager);
-    address pauser = vm.envOr("PAUSER", deployer);
+    address pauser = vm.envOr("PAUSER", admin);
     console.log("Pauser: %s", pauser);
     // token
     address token = vm.envAddress("TOKEN");
@@ -52,9 +52,8 @@ contract MinterScript is Script {
 
     //    vm.startBroadcast(deployerPrivateKey);
     vm.startBroadcast();
-    address proxy = Upgrades.deployTransparentProxy(
+    address proxy = Upgrades.deployUUPSProxy(
       "Minter.sol",
-      admin,
       abi.encodeCall(
         Minter.initialize,
         (
@@ -74,7 +73,5 @@ contract MinterScript is Script {
     console.log("Minter proxy address: %s", proxy);
     address implAddress = Upgrades.getImplementationAddress(proxy);
     console.log("Minter implementation address: %s", implAddress);
-    address proxyAdminAddress = Upgrades.getAdminAddress(proxy);
-    console.log("Minter proxy admin address: %s", proxyAdminAddress);
   }
 }
