@@ -152,6 +152,11 @@ contract Minter is
 
   /* ============ External Getters ============ */
 
+  /**
+   * @dev estimateTotalOut  get assToken amount
+   * @param _amountIn - amount of token
+   * @param _mintRatio - mint ratio
+   */
   function estimateTotalOut(
     uint256 _amountIn,
     uint256 _mintRatio
@@ -178,10 +183,18 @@ contract Minter is
     return amountOut;
   }
 
+  /**
+   * @dev swapToAssTokens  get assToken amount
+   * @param tokens - amount of token
+   */
   function swapToAssTokens(uint256 tokens) public view returns (uint256) {
     return IPancakeStableSwapPool(pancakeSwapPool).get_dy(0, 1, tokens);
   }
 
+  /**
+   * @dev convertToTokens  get token amount
+   * @param assTokens - amount of assTokens
+   */
   function convertToTokens(uint256 assTokens) public view returns (uint256) {
     uint256 totalSupply = assToken.totalSupply();
     if (totalSupply == 0 || totalTokens == 0) {
@@ -190,6 +203,10 @@ contract Minter is
     return (assTokens * totalTokens) / totalSupply;
   }
 
+  /**
+   * @dev convertToAssTokens  get assToken amount
+   * @param tokens - amount of token
+   */
   function convertToAssTokens(uint256 tokens) public view returns (uint256) {
     uint256 totalSupply = assToken.totalSupply();
     if (totalSupply == 0 || totalTokens == 0) {
@@ -214,6 +231,11 @@ contract Minter is
     return _smartMint(_amountIn, _mintRatio, _minOut);
   }
 
+  /**
+   * @dev compoundRewards
+   * @param _rewardsType - rewards type
+   * @param _amountIn - amount of token
+   */
   function compoundRewards(
     IMinter.RewardsType _rewardsType,
     uint256 _amountIn
@@ -313,6 +335,11 @@ contract Minter is
 
   /* ============ Admin Functions ============ */
 
+  /**
+   * @dev updateFeeRate
+   * @param _rewardsType - rewards type
+   * @param _feeRate - fee rate
+   */
   function updateFeeRate(
     RewardsType _rewardsType,
     uint256 _feeRate
@@ -350,6 +377,11 @@ contract Minter is
     emit FeeRateUpdated(msg.sender, _rewardsType, oldFeeRate, _feeRate);
   }
 
+  /**
+   * @dev withdrawFee
+   * @param receipt - Address of the receipt
+   * @param amountIn - amount of token
+   */
   function withdrawFee(
     address receipt,
     uint256 amountIn
