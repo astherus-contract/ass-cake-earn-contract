@@ -83,10 +83,17 @@ contract RewardDistributionScheduler is
     uint256 _amount,
     uint256 _epochs,
     uint256 _startTime
-  ) external override onlyRole(MANAGER) nonReentrant {
+  ) external override onlyRole(MANAGER) nonReentrant whenNotPaused {
     require(_amount > 0, "Invalid amount");
     require(_epochs > 0, "Invalid epochs");
     require(_startTime > 0, "Invalid startTime");
+
+    require(
+      IMinter.RewardsType.VeTokenRewards == _rewardsType ||
+        IMinter.RewardsType.VoteRewards == _rewardsType ||
+        IMinter.RewardsType.Donate == _rewardsType,
+      "Invalid rewardsType"
+    );
 
     uint256 startTime = (_startTime / 1 days) * 1 days;
 
@@ -113,6 +120,7 @@ contract RewardDistributionScheduler is
     override
     onlyRole(BOT)
     nonReentrant
+    whenNotPaused
   {
     uint256 currentTimestamp = (block.timestamp / 1 days) * 1 days;
     uint max = (uint)(type(IMinter.RewardsType).max);

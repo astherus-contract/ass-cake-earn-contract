@@ -44,7 +44,7 @@ contract Minter is
   // total vote rewards
   uint256 public totalVoteRewards;
   // total donate rewards
-  uint256 public donateRewards;
+  uint256 public totalDonateRewards;
   // veToken rewards fee rate in percentage (10_000 = 100%)
   uint256 public veTokenRewardsFeeRate;
   // vote rewards fee rate in percentage (10_000 = 100%)
@@ -178,14 +178,8 @@ contract Minter is
     return amountOut;
   }
 
-  function currentSwapRatio() public view returns (uint256) {
-    // 1 assCAKE=currentSwapRatio CAKE
-    uint256 amountOut = IPancakeStableSwapPool(pancakeSwapPool).get_dy(
-      1,
-      0,
-      1e18
-    );
-    return (amountOut * DENOMINATOR) / 1e18;
+  function swapToAssTokens(uint256 tokens) public view returns (uint256) {
+    return IPancakeStableSwapPool(pancakeSwapPool).get_dy(0, 1, tokens);
   }
 
   function convertToTokens(uint256 assTokens) public view returns (uint256) {
@@ -238,16 +232,20 @@ contract Minter is
       fee = (_amountIn * voteRewardsFeeRate) / DENOMINATOR;
       lockAmount = _amountIn - fee;
       totalVoteRewards += lockAmount;
-    } else {
+    } else if (_rewardsType == RewardsType.Donate) {
       fee = (_amountIn * donateRewardsFeeRate) / DENOMINATOR;
       lockAmount = _amountIn - fee;
-      donateRewards += lockAmount;
+      totalDonateRewards += lockAmount;
+    } else {
+      revert("Invalid rewardsType");
     }
     totalFee += fee;
     totalTokens += lockAmount;
 
-    IERC20(token).safeIncreaseAllowance(universalProxy, lockAmount);
-    IUniversalProxy(universalProxy).lock(lockAmount);
+    if (lockAmount > 0) {
+      IERC20(token).safeIncreaseAllowance(universalProxy, lockAmount);
+      IUniversalProxy(universalProxy).lock(lockAmount);
+    }
 
     emit RewardsCompounded(
       msg.sender,
@@ -332,20 +330,22 @@ contract Minter is
       veTokenRewardsFeeRate = _feeRate;
     } else if (_rewardsType == RewardsType.VoteRewards) {
       require(
-        veTokenRewardsFeeRate != _feeRate,
+        voteRewardsFeeRate != _feeRate,
         "newFeeRate can not be equal oldFeeRate"
       );
 
       oldFeeRate = voteRewardsFeeRate;
       voteRewardsFeeRate = _feeRate;
-    } else {
+    } else if (_rewardsType == RewardsType.Donate) {
       require(
-        veTokenRewardsFeeRate != _feeRate,
+        donateRewardsFeeRate != _feeRate,
         "newFeeRate can not be equal oldFeeRate"
       );
 
       oldFeeRate = donateRewardsFeeRate;
       donateRewardsFeeRate = _feeRate;
+    } else {
+      revert("Invalid rewardsType");
     }
     emit FeeRateUpdated(msg.sender, _rewardsType, oldFeeRate, _feeRate);
   }
@@ -358,8 +358,9 @@ contract Minter is
     require(amountIn > 0, "Invalid amount");
     require(amountIn <= totalFee, "Invalid amount");
 
-    IERC20(token).safeTransfer(receipt, amountIn);
     totalFee -= amountIn;
+    IERC20(token).safeTransfer(receipt, amountIn);
+
     emit FeeWithdrawn(msg.sender, receipt, amountIn);
   }
 
@@ -429,7 +430,7 @@ contract Minter is
     uint256 _minOut
   ) internal returns (uint256) {
     require(_amountIn > 0, "Invalid amount");
-    require(_mintRatio <= maxSwapRatio, "Incorrect Ratio");
+    require(_mintRatio <= DENOMINATOR, "Incorrect Ratio");
 
     token.safeTransferFrom(msg.sender, address(this), _amountIn);
 
