@@ -20,7 +20,7 @@ contract RewardDistributionScheduler is
   UUPSUpgradeable
 {
   using SafeERC20 for IERC20;
-  // compounder role
+  // bot role
   bytes32 public constant BOT = keccak256("BOT");
   // pause role
   bytes32 public constant PAUSER = keccak256("PAUSER");
@@ -78,6 +78,13 @@ contract RewardDistributionScheduler is
 
   // /* ============ External Functions ============ */
 
+  /**
+   * @dev addRewardsSchedule
+   * @param _rewardsType - rewards type
+   * @param _amount - rewards amount
+   * @param _epochs - rewards epochs eg:7;14
+   * @param _startTime - rewards startTime timestamp
+   */
   function addRewardsSchedule(
     IMinter.RewardsType _rewardsType,
     uint256 _amount,
@@ -115,6 +122,9 @@ contract RewardDistributionScheduler is
     );
   }
 
+  /**
+   * @dev executeRewardSchedules per day
+   */
   function executeRewardSchedules()
     external
     override
