@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IVeCake } from "../src/interfaces/pancakeswap/IVeCake.sol";
 import { UniversalProxy } from "../src/UniversalProxy.sol";
-import { MockPancakeStableSwapRouter } from "../src/mock/pancakeswap/MockPancakeStableSwapRouter.sol";
-import { MockPancakeStableSwapPool } from "../src/mock/pancakeswap/MockPancakeStableSwapPool.sol";
+import { MockPancakeStableSwapRouter } from "../src/mock/MockPancakeStableSwapRouter.sol";
+import { MockPancakeStableSwapPool } from "../src/mock/MockPancakeStableSwapPool.sol";
 import { RewardDistributionScheduler } from "../src/RewardDistributionScheduler.sol";
 import { MockGaugeVoting } from "../src/mock/pancakeswap/MockGaugeVoting.sol";
 import { MockIFO } from "../src/mock/pancakeswap/MockIFO.sol";
@@ -16,7 +16,7 @@ import { MockCakePlatform } from "../src/mock/stakeDao/MockCakePlatform.sol";
 import { MockRevenueSharingPool } from "../src/mock/pancakeswap/MockRevenueSharingPool.sol";
 
 /** cmd:
- forge clean &&
+ forge clean && \
  forge build --via-ir && \
  forge test -vvvv --match-contract UniversalProxyTest --via-ir
 */
@@ -33,7 +33,6 @@ contract UniversalProxyTest is Test {
   address minter = makeAddr("MINTER");
   address pauser = makeAddr("PAUSER");
   address bot = makeAddr("BOT");
-  address manager = makeAddr("MANAGER");
   address recipient = makeAddr("RECIPIENT");
   // BSC CAKE
   IERC20 token = IERC20(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
@@ -49,6 +48,7 @@ contract UniversalProxyTest is Test {
   UniversalProxy universalProxy;
   address[] revenueSharingPools;
   address cakePlatform;
+  uint256 maxLockDuration;
   // For IFO, we set IFO token as TON for example
   uint8 pid = 1;
   address ifoToken = 0x76A797A59Ba2C17726896976B7B3747BfD1d220f;
@@ -76,7 +76,7 @@ contract UniversalProxyTest is Test {
       "RewardDistributionScheduler.sol",
       abi.encodeCall(
         RewardDistributionScheduler.initialize,
-        (admin, address(token), minter, manager)
+        (admin, address(token), minter)
       )
     );
     rewardDistributionScheduler = RewardDistributionScheduler(
@@ -111,13 +111,13 @@ contract UniversalProxyTest is Test {
           pauser,
           minter,
           bot,
-          manager,
           address(token),
           address(veToken),
           address(gaugeVoting),
           address(ifo),
           address(rewardDistributionScheduler),
           revenueSharingPools,
+          365 * 86400,
           address(cakePlatform)
         )
       )
@@ -128,7 +128,7 @@ contract UniversalProxyTest is Test {
     // grant universalProxy as admin of rewardDistributionScheduler
     vm.startPrank(admin);
     rewardDistributionScheduler.grantRole(
-      rewardDistributionScheduler.MANAGER(),
+      rewardDistributionScheduler.DEFAULT_ADMIN_ROLE(),
       address(universalProxy)
     );
     vm.stopPrank();
@@ -171,8 +171,8 @@ contract UniversalProxyTest is Test {
     uint256[] memory chainIds = new uint256[](1);
     chainIds[0] = 56;
     // case vote
-    vm.prank(manager);
-    universalProxy.castVote(gauges, weights, chainIds, false, false);
+    vm.prank(admin);
+    universalProxy.caseVote(gauges, weights, chainIds, false, false);
   }
 
   function test_claim_veToken_rewards() public {
@@ -186,9 +186,9 @@ contract UniversalProxyTest is Test {
   }
 
   function test_deposit_IFO() public {
-    deal(address(token), manager, 1000 ether);
+    deal(address(token), admin, 1000 ether);
     // participant ifo
-    vm.startPrank(manager);
+    vm.startPrank(admin);
     token.safeIncreaseAllowance(address(universalProxy), 100 ether);
     universalProxy.depositIFO(pid, 100 ether);
     vm.stopPrank();
@@ -196,16 +196,16 @@ contract UniversalProxyTest is Test {
 
   function test_harvest_IFO() public {
     // participant ifo
-    vm.prank(manager);
+    vm.prank(admin);
     universalProxy.harvestIFO(pid, address(ifoToken));
     // TON token should be transferred to admin
-    assertEq(IERC20(ifoToken).balanceOf(manager), 1000 ether);
+    assertEq(IERC20(ifoToken).balanceOf(admin), 1000 ether);
   }
 
   function test_claim_from_stakeDao() public {
     uint256[] memory bountyIds = new uint256[](1);
     bountyIds[0] = 1;
-    vm.startPrank(manager);
+    vm.startPrank(admin);
     universalProxy.setRecipient(recipient);
     universalProxy.claimRewardsFromStakeDao(bountyIds);
     vm.stopPrank();
