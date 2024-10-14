@@ -7,8 +7,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IVeCake } from "../src/interfaces/pancakeswap/IVeCake.sol";
 import { UniversalProxy } from "../src/UniversalProxy.sol";
-import { MockPancakeStableSwapRouter } from "../src/mock/MockPancakeStableSwapRouter.sol";
-import { MockPancakeStableSwapPool } from "../src/mock/MockPancakeStableSwapPool.sol";
 import { RewardDistributionScheduler } from "../src/RewardDistributionScheduler.sol";
 import { MockGaugeVoting } from "../src/mock/pancakeswap/MockGaugeVoting.sol";
 import { MockIFO } from "../src/mock/pancakeswap/MockIFO.sol";
@@ -32,6 +30,7 @@ contract UniversalProxyTest is Test {
   address admin = makeAddr("ADMIN");
   address minter = makeAddr("MINTER");
   address pauser = makeAddr("PAUSER");
+  address manager = makeAddr("MANAGER");
   address bot = makeAddr("BOT");
   address recipient = makeAddr("RECIPIENT");
   // BSC CAKE
@@ -76,7 +75,7 @@ contract UniversalProxyTest is Test {
       "RewardDistributionScheduler.sol",
       abi.encodeCall(
         RewardDistributionScheduler.initialize,
-        (admin, address(token), minter)
+        (admin, address(token), minter, manager)
       )
     );
     rewardDistributionScheduler = RewardDistributionScheduler(
@@ -111,13 +110,13 @@ contract UniversalProxyTest is Test {
           pauser,
           minter,
           bot,
+          manager,
           address(token),
           address(veToken),
           address(gaugeVoting),
           address(ifo),
           address(rewardDistributionScheduler),
           revenueSharingPools,
-          365 * 86400,
           address(cakePlatform)
         )
       )
@@ -128,7 +127,7 @@ contract UniversalProxyTest is Test {
     // grant universalProxy as admin of rewardDistributionScheduler
     vm.startPrank(admin);
     rewardDistributionScheduler.grantRole(
-      rewardDistributionScheduler.DEFAULT_ADMIN_ROLE(),
+      rewardDistributionScheduler.MANAGER(),
       address(universalProxy)
     );
     vm.stopPrank();
@@ -170,9 +169,9 @@ contract UniversalProxyTest is Test {
     weights[0] = 500;
     uint256[] memory chainIds = new uint256[](1);
     chainIds[0] = 56;
-    // case vote
-    vm.prank(admin);
-    universalProxy.caseVote(gauges, weights, chainIds, false, false);
+    // cast vote
+    vm.prank(manager);
+    universalProxy.castVote(gauges, weights, chainIds, false, false);
   }
 
   function test_claim_veToken_rewards() public {
@@ -186,9 +185,9 @@ contract UniversalProxyTest is Test {
   }
 
   function test_deposit_IFO() public {
-    deal(address(token), admin, 1000 ether);
+    deal(address(token), manager, 1000 ether);
     // participant ifo
-    vm.startPrank(admin);
+    vm.startPrank(manager);
     token.safeIncreaseAllowance(address(universalProxy), 100 ether);
     universalProxy.depositIFO(pid, 100 ether);
     vm.stopPrank();
@@ -196,16 +195,16 @@ contract UniversalProxyTest is Test {
 
   function test_harvest_IFO() public {
     // participant ifo
-    vm.prank(admin);
+    vm.prank(manager);
     universalProxy.harvestIFO(pid, address(ifoToken));
     // TON token should be transferred to admin
-    assertEq(IERC20(ifoToken).balanceOf(admin), 1000 ether);
+    assertEq(IERC20(ifoToken).balanceOf(manager), 1000 ether);
   }
 
   function test_claim_from_stakeDao() public {
     uint256[] memory bountyIds = new uint256[](1);
     bountyIds[0] = 1;
-    vm.startPrank(admin);
+    vm.startPrank(manager);
     universalProxy.setRecipient(recipient);
     universalProxy.claimRewardsFromStakeDao(bountyIds);
     vm.stopPrank();
