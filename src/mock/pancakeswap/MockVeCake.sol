@@ -54,6 +54,6 @@ contract MockVeCake is IVeCake {
     uint16 withdrawFlag
   ) {
     LockedBalance memory locked = lockedBalances[_user];
-    return (locked.amount, locked.end, address(0), uint128(0), SafeCast.toUint8(locked.end), uint48(0), uint16(0), uint16(0));
+    return (locked.amount, locked.end, address(0), uint128(0), SafeCast.toUint48(locked.end), uint48(0), uint16(0), uint16(0));
   }
 }

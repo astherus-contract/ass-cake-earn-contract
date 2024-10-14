@@ -82,6 +82,14 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
     assertEq(buyback.paused(), true);
     vm.stopPrank();
 
+    //contract not pause
+    vm.startPrank(admin);
+    if (buyback.paused() == true) {
+      buyback.togglePause();
+    }
+    assertEq(buyback.paused(), false);
+    vm.stopPrank();
+
     vm.startPrank(bot);
     vm.expectRevert();
     buyback.buyback(oneInchRouter, "");
