@@ -9,9 +9,8 @@ contract MinterScript is Script {
   function setUp() public {}
 
   function run() public {
-    //    uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-    //    address deployer = vm.addr(deployerPrivateKey);
-    address deployer = msg.sender;
+    uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+    address deployer = vm.addr(deployerPrivateKey);
     console.log("Deployer: %s", deployer);
     address admin = vm.envOr("ADMIN", deployer);
     console.log("Admin: %s", admin);
@@ -50,8 +49,7 @@ contract MinterScript is Script {
     // max swap ratio
     uint256 maxSwapRatio = vm.envUint("MAX_SWAP_RATIO");
 
-    //    vm.startBroadcast(deployerPrivateKey);
-    vm.startBroadcast();
+    vm.startBroadcast(deployerPrivateKey);
     address proxy = Upgrades.deployUUPSProxy(
       "Minter.sol",
       abi.encodeCall(
