@@ -73,7 +73,7 @@ contract MinterTest is Test {
 
     vm.startPrank(admin);
     // mint assToken to swap contract
-    assToken.mint(address(pancakeSwapPool), 1000 ether);
+    //    assToken.mint(address(pancakeSwapPool), 1000 ether);
     vm.stopPrank();
 
     vm.startPrank(user1);
@@ -145,60 +145,75 @@ contract MinterTest is Test {
    * @dev test smartMint  assToken/token=1
    */
   function testSmartMintSuccess_assToken_vs_token_eq_1() public {
-    // first totalTokens=0;assTokenTotalSupply=1000 ether
-    //(tokens * assTokenTotalSupply) / totalTokens;
-    //so assToken/token=1
+    //(tokens * (assTokenTotalSupply+1)) / (totalTokens+1);
     uint256 convertToAssTokens = minter.convertToAssTokens(1 ether);
     uint256 convertToTokens = minter.convertToTokens(convertToAssTokens);
     assertEq(convertToAssTokens, 1 ether);
     assertEq(convertToTokens, 1 ether);
-    smartMintSuccess();
+    smartMintSuccess(10 ether, 1_0000);
   }
 
   /**
-   * @dev test smartMint assToken/token>1
+   * @dev test smartMint swap assToken/token<1
    */
-  function testSmartMintSuccess_assToken_vs_token_gt_1() public {
-    //default assTokenTotalSupply=1000 ether
-    //prepare totalTokens=90
-    compoundVeTokenRewardsSuccess(100 ether);
-
-    //(tokens * assTokenTotalSupply) / totalTokens;
+  function testSmartMintSuccess_swap_assToken_vs_token_lt_1() public {
+    smartMintSuccess(10 ether, 1_0000); //assTokenTotalSupply =10，TotalTokens=10
+    compoundVeTokenRewardsSuccess(10 ether); //assTokenTotalSupply =10，TotalTokens=10+9
+    //(tokens * (assTokenTotalSupply+1)) / (totalTokens+1);
     uint256 convertToAssTokens = minter.convertToAssTokens(1 ether);
     assertNotEq(convertToAssTokens, 1 ether);
-    smartMintSuccess();
+
+    vm.startPrank(user1);
+    token.transfer(address(pancakeSwapPool), 11 ether);
+    assToken.transfer(address(pancakeSwapPool), 10 ether);
+    uint256 tokenAmount = 11 ether;
+    uint256 assTokenAmount = 10 ether;
+    pancakeSwapPool.setExchangeRate((assTokenAmount * 1e5) / tokenAmount);
+    vm.stopPrank();
+
+    smartMintSuccess(1 ether, 1_000);
   }
 
   /**
-   * @dev test smartMint assToken/token<1
+   * @dev test smartMint swap assToken/token>1
    */
-  function testSmartMintSuccess_assToken_vs_token_lt_1() public {
-    //default assTokenTotalSupply=1000 ether
-    //prepare totalTokens=99990
-    compoundVeTokenRewardsSuccess(100000 ether);
-
-    //(tokens * assTokenTotalSupply) / totalTokens;
+  function testSmartMintSuccess_swap_assToken_vs_token_gt_1() public {
+    smartMintSuccess(10 ether, 1_0000); //assTokenTotalSupply =10，TotalTokens=10
+    compoundVeTokenRewardsSuccess(10 ether); //assTokenTotalSupply =10，TotalTokens=10+9
+    //(tokens * (assTokenTotalSupply+1)) / (totalTokens+1);
     uint256 convertToAssTokens = minter.convertToAssTokens(1 ether);
     assertNotEq(convertToAssTokens, 1 ether);
-    smartMintSuccess();
+
+    vm.startPrank(user1);
+    token.transfer(address(pancakeSwapPool), 9 ether);
+    assToken.transfer(address(pancakeSwapPool), 10 ether);
+    uint256 tokenAmount = 9 ether;
+    uint256 assTokenAmount = 10 ether;
+    pancakeSwapPool.setExchangeRate((assTokenAmount * 1e5) / tokenAmount);
+    vm.stopPrank();
+
+    smartMintSuccess(10 ether, 1_000);
   }
 
   /**
    * @dev test smartMint
    */
-  function smartMintSuccess() public {
-    //(tokens * assTokenTotalSupply) / totalTokens;
+  function smartMintSuccess(uint256 amountIn, uint256 mintRatio) private {
+    //(tokens * (assTokenTotalSupply+1)) / (totalTokens+1);
     uint256 convertToAssTokens = minter.convertToAssTokens(1 ether);
+    uint256 swapToAssTokens = minter.swapToAssTokens(1 ether);
+
     console.log("convertToAssTokens:%s", convertToAssTokens);
+    console.log("swapToAssTokens:%s", convertToAssTokens);
 
     vm.startPrank(user1);
-    uint256 amountIn = 1 ether;
-    uint256 mintRatio = 1_000;
+    //    uint256 amountIn = 10 ether;
+    //    uint256 mintRatio = 1_000;
     uint256 mintAssTokenAmount = (((convertToAssTokens * amountIn) / 1 ether) *
       mintRatio) / minter.DENOMINATOR();
-    uint256 buybackAssTokenAmount = amountIn -
+    uint256 buybackAssTokenAmount = ((amountIn -
       (amountIn * mintRatio) /
-      minter.DENOMINATOR();
+      minter.DENOMINATOR()) * swapToAssTokens) / 1 ether;
     uint256 userReceiveAssTokenAmount = mintAssTokenAmount +
       buybackAssTokenAmount;
     uint256 minOut = userReceiveAssTokenAmount;
@@ -235,15 +250,15 @@ contract MinterTest is Test {
 
     uint256 assTokenTotalSupply = IERC20(assToken).totalSupply();
 
-    //(tokens * totalSupply) / totalTokens
+    //(tokens * (totalSupply+1)) / (totalTokens+1)
     assertEq(
-      (1 ether * assTokenTotalSupply) / afterTotalTokens,
+      (1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1),
       minter.convertToAssTokens(1 ether)
     );
 
-    //(assTokens * totalTokens) / totalSupply
+    //(assTokens * (totalTokens+1)) / (totalSupply+1)
     assertEq(
-      (1 ether * afterTotalTokens) / assTokenTotalSupply,
+      (1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1),
       minter.convertToTokens(1 ether)
     );
 
@@ -377,13 +392,13 @@ contract MinterTest is Test {
 
     //(tokens * totalSupply) / totalTokens
     assertEq(
-      (1 ether * assTokenTotalSupply) / afterTotalTokens,
+      (1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1),
       minter.convertToAssTokens(1 ether)
     );
 
-    //(assTokens * totalTokens) / totalSupply
+    //(assTokens * (totalTokens+1)) / (totalSupply+1)
     assertEq(
-      (1 ether * afterTotalTokens) / assTokenTotalSupply,
+      (1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1),
       minter.convertToTokens(1 ether)
     );
 
@@ -431,15 +446,15 @@ contract MinterTest is Test {
     assertEq(beforeCompounderBalance - afterCompounderBalance, amountIn);
 
     uint256 assTokenTotalSupply = IERC20(assToken).totalSupply();
-    //(tokens * totalSupply) / totalTokens
+    //(tokens * (totalSupply+1)) / (totalTokens+1)
     assertEq(
-      (1 ether * assTokenTotalSupply) / afterTotalTokens,
+      (1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1),
       minter.convertToAssTokens(1 ether)
     );
 
-    //(assTokens * totalTokens) / totalSupply
+    //(assTokens * (totalTokens+1)) / (totalSupply+1)
     assertEq(
-      (1 ether * afterTotalTokens) / assTokenTotalSupply,
+      (1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1),
       minter.convertToTokens(1 ether)
     );
 
@@ -487,15 +502,15 @@ contract MinterTest is Test {
     assertEq(beforeCompounderBalance - afterCompounderBalance, amountIn);
 
     uint256 assTokenTotalSupply = IERC20(assToken).totalSupply();
-    //(tokens * totalSupply) / totalTokens
+    //(tokens * (totalSupply+1)) / (totalTokens+1)
     assertEq(
-      (1 ether * assTokenTotalSupply) / afterTotalTokens,
+      (1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1),
       minter.convertToAssTokens(1 ether)
     );
 
-    //(assTokens * totalTokens) / totalSupply
+    //(assTokens * (totalTokens+1)) / (totalSupply+1)
     assertEq(
-      (1 ether * afterTotalTokens) / assTokenTotalSupply,
+      (1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1),
       minter.convertToTokens(1 ether)
     );
 
@@ -533,23 +548,23 @@ contract MinterTest is Test {
 
     //update VoteRewards(newFeeRate can not be equal oldFeeRate)
     vm.startPrank(manager);
-    minter.updateFeeRate(IMinter.RewardsType.VoteRewards, 1_0000);
+    minter.updateFeeRate(IMinter.RewardsType.VoteRewards, 9999);
     vm.expectRevert("newFeeRate can not be equal oldFeeRate");
-    minter.updateFeeRate(IMinter.RewardsType.VoteRewards, 1_0000);
+    minter.updateFeeRate(IMinter.RewardsType.VoteRewards, 9999);
     vm.stopPrank();
 
     //update VeTokenRewards(newFeeRate can not be equal oldFeeRate)
     vm.startPrank(manager);
-    minter.updateFeeRate(IMinter.RewardsType.VeTokenRewards, 1_0000);
+    minter.updateFeeRate(IMinter.RewardsType.VeTokenRewards, 9999);
     vm.expectRevert("newFeeRate can not be equal oldFeeRate");
-    minter.updateFeeRate(IMinter.RewardsType.VeTokenRewards, 1_0000);
+    minter.updateFeeRate(IMinter.RewardsType.VeTokenRewards, 9999);
     vm.stopPrank();
 
     //update Donate(newFeeRate can not be equal oldFeeRate)
     vm.startPrank(manager);
-    minter.updateFeeRate(IMinter.RewardsType.Donate, 1_0000);
+    minter.updateFeeRate(IMinter.RewardsType.Donate, 9999);
     vm.expectRevert("newFeeRate can not be equal oldFeeRate");
-    minter.updateFeeRate(IMinter.RewardsType.Donate, 1_0000);
+    minter.updateFeeRate(IMinter.RewardsType.Donate, 9999);
     vm.stopPrank();
 
     //update VoteRewards success
