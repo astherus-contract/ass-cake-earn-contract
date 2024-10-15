@@ -100,6 +100,7 @@ contract RewardDistributionSchedulerTest is Test {
           address(token),
           address(token),
           revenueSharingPools,
+          address(token),
           address(token)
         )
       )

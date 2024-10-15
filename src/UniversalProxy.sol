@@ -13,6 +13,7 @@ import "./interfaces/IRewardDistributionScheduler.sol";
 import "./interfaces/pancakeswap/IVeCake.sol";
 import "./interfaces/pancakeswap/IGaugeVoting.sol";
 import "./interfaces/pancakeswap/IRevenueSharingPool.sol";
+import "./interfaces/pancakeswap/IRevenueSharingPoolGateway.sol";
 import "./interfaces/pancakeswap/IIFOV8.sol";
 import "./interfaces/stakeDao/ICakePlatform.sol";
 
@@ -44,6 +45,7 @@ contract UniversalProxy is
   IIFOV8 public ifo;
   // revenue sharing pools
   address[] public revenueSharingPools;
+  IRevenueSharingPoolGateway public revenueSharingPoolGateway;
   // rewards distribution scheduler
   IRewardDistributionScheduler public rewardsDistributionScheduler;
   // IFO info (pid => depositAmount)
@@ -52,7 +54,6 @@ contract UniversalProxy is
   ICakePlatform public cakePlatform;
 
   // lock created flag
-  // @TODO use flag instead of checking on veCake contract should use less gas?
   bool public lockCreated;
   // maximum lock duration = 4 years - 1s (same as PCS)
   uint256 public constant WEEK = 7 days;
@@ -98,6 +99,7 @@ contract UniversalProxy is
     address _ifo,
     address _rewardDistributionScheduler,
     address[] memory _revenueSharingPools,
+    address _revenueSharingPoolGateway,
     address _cakePlatform
   ) external initializer {
     require(_admin != address(0), "Invalid admin address");
@@ -105,6 +107,10 @@ contract UniversalProxy is
     require(_veToken != address(0), "Invalid veToken address");
     require(_gaugeVoting != address(0), "Invalid gaugeVoting address");
     require(_ifo != address(0), "Invalid ifo address");
+    require(
+      _revenueSharingPoolGateway != address(0),
+      "Invalid revenueSharingPoolGateway address"
+    );
     require(_cakePlatform != address(0), "Invalid cakePlatform address");
     require(
       _rewardDistributionScheduler != address(0),
@@ -129,6 +135,9 @@ contract UniversalProxy is
     gaugeVoting = IGaugeVoting(_gaugeVoting);
     ifo = IIFOV8(_ifo);
     revenueSharingPools = _revenueSharingPools;
+    revenueSharingPoolGateway = IRevenueSharingPoolGateway(
+      _revenueSharingPoolGateway
+    );
     rewardsDistributionScheduler = IRewardDistributionScheduler(
       _rewardDistributionScheduler
     );
@@ -154,21 +163,16 @@ contract UniversalProxy is
     // transfer token from minter to this contract
     token.safeTransferFrom(msg.sender, address(this), amount);
     token.safeIncreaseAllowance(address(veToken), amount);
-    // create lock if not created
-    if (!lockCreated) {
-      veToken.createLock(amount, block.timestamp + MAX_LOCK_DURATION);
-      lockCreated = true;
-    } else {
+    // increase amt + extend lock if locked already
+    if (lockCreated) {
       // increase lock amount
       veToken.increaseLockAmount(amount);
-      // get new unlock time
-      uint256 newUnlockTime = block.timestamp + MAX_LOCK_DURATION;
-      // get lock end time
-      (, uint256 end, , , , , , ) = veToken.getUserInfo(address(this));
-      // increase unlock time if new unlock time is greater than lock end time
-      if (((newUnlockTime / 1 weeks) * 1 weeks) > end) {
-        veToken.increaseUnlockTime(newUnlockTime);
-      }
+      // attempt to extend lock duration
+      _extendLock();
+    } else {
+      // create lock if not created
+      veToken.createLock(amount, block.timestamp + MAX_LOCK_DURATION);
+      lockCreated = true;
     }
     emit LockIncreased(amount);
   }
@@ -178,6 +182,11 @@ contract UniversalProxy is
    *      for a long time and the lock duration is about to expire
    */
   function extendLock() external override onlyRole(BOT) whenNotPaused {
+    _extendLock();
+  }
+
+  // @dev extend lock with max. unlock timestamp
+  function _extendLock() private {
     // get new unlock time
     uint256 newUnlockTime = block.timestamp + MAX_LOCK_DURATION;
     // get lock end time
@@ -208,7 +217,6 @@ contract UniversalProxy is
     bool skipNative,
     bool skipProxy
   ) external onlyRole(MANAGER) whenNotPaused {
-    // @TODO shall we add more checks here?
     gaugeVoting.voteForGaugeWeightsBulk(
       gaugeAddrs,
       userWeights,
@@ -230,14 +238,17 @@ contract UniversalProxy is
     whenNotPaused
     nonReentrant
   {
-    // we won't use revenueSharingPoolGateway here
-    // as it didn't return the claimed amount
-    uint256 totalClaimed = 0;
-    for (uint256 i = 0; i < revenueSharingPools.length; ++i) {
-      totalClaimed += IRevenueSharingPool(revenueSharingPools[i]).claimForUser(
-        address(this)
-      );
-    }
+    // get reward token balance before
+    uint256 tokenBalanceBefore = token.balanceOf(address(this));
+    // claim rewards from revenueSharingPoolGateway
+    revenueSharingPoolGateway.claimMultipleWithoutProxy(
+      revenueSharingPools,
+      address(this)
+    );
+    // get balance after the claim
+    uint256 tokenBalanceAfter = token.balanceOf(address(this));
+    // calculate total claimed rewards
+    uint256 totalClaimed = tokenBalanceAfter - tokenBalanceBefore;
     // approve rewardsDistributionScheduler to spend reward tokens
     token.safeIncreaseAllowance(
       address(rewardsDistributionScheduler),
@@ -267,8 +278,6 @@ contract UniversalProxy is
   ) external onlyRole(MANAGER) whenNotPaused {
     require(amount > 0, "amount must be greater than 0");
     require(pid >= 0, "invalid pid");
-    // save how much token is deposited
-    ifoPositions[pid] += amount;
     // transfer token from multi-sig wallet to here
     token.safeTransferFrom(msg.sender, address(this), amount);
     // approve IFO contract to spend the token
@@ -287,10 +296,16 @@ contract UniversalProxy is
     uint8 pid,
     address rewardToken
   ) external onlyRole(MANAGER) whenNotPaused nonReentrant {
+    // get deposit token balance before
+    uint256 tokenBalanceBefore = token.balanceOf(address(this));
     // get harvested token from IFO
-    IIFOV8(ifo).harvestPool(pid);
+    ifo.harvestPool(pid);
+    // get deposit token balance after
+    uint256 tokenBalanceAfter = token.balanceOf(address(this));
     // not all tokens are exchanged to IFO tokens
-    uint256 refundAmt = token.balanceOf(address(this)) - ifoPositions[pid];
+    uint256 refundAmt = tokenBalanceAfter - tokenBalanceBefore;
+    // record diff. into ifoPositions
+    ifoPositions[pid] = refundAmt;
     // get harvested token amount from IFO
     uint256 harvestedAmt = IERC20(rewardToken).balanceOf(address(this));
     // send deposited token and reward tokens back to msg.sender
@@ -316,8 +331,9 @@ contract UniversalProxy is
   function setRecipient(
     address recipient
   ) external onlyRole(MANAGER) whenNotPaused {
-    // recipient can be zero address
     // if zero address is set, then msg.sender will be used as recipient
+    // recipient can't be zero address
+    require(recipient != address(0), "Invalid recipient address");
     cakePlatform.setRecipient(recipient);
   }
 
@@ -344,7 +360,7 @@ contract UniversalProxy is
    */
   function setRevenuePoolIds(
     address[] memory poolIds
-  ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+  ) external onlyRole(MANAGER) {
     revenueSharingPools = poolIds;
     emit RevenuePoolIdsSet(poolIds);
   }

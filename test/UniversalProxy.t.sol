@@ -12,6 +12,7 @@ import { MockGaugeVoting } from "../src/mock/pancakeswap/MockGaugeVoting.sol";
 import { MockIFO } from "../src/mock/pancakeswap/MockIFO.sol";
 import { MockCakePlatform } from "../src/mock/stakeDao/MockCakePlatform.sol";
 import { MockRevenueSharingPool } from "../src/mock/pancakeswap/MockRevenueSharingPool.sol";
+import { MockRevenueSharingPoolGateway } from "../src/mock/pancakeswap/MockRevenueSharingPoolGateway.sol";
 
 /** cmd:
  forge clean && \
@@ -45,6 +46,7 @@ contract UniversalProxyTest is Test {
   MockIFO ifo;
   RewardDistributionScheduler rewardDistributionScheduler;
   UniversalProxy universalProxy;
+  MockRevenueSharingPoolGateway revenueSharingPoolGateway;
   address[] revenueSharingPools;
   address cakePlatform;
   uint256 maxLockDuration;
@@ -95,6 +97,9 @@ contract UniversalProxyTest is Test {
     deal(address(token), revenueSharingPools[0], 1000 ether);
     deal(address(token), revenueSharingPools[1], 1000 ether);
 
+    // deploy RevenueSharingPoolGateway
+    revenueSharingPoolGateway = new MockRevenueSharingPoolGateway();
+
     // deploy cakePlatform
     cakePlatform = address(new MockCakePlatform(address(token)));
     console.log("Mock CakePlatform address: %s", address(cakePlatform));
@@ -117,6 +122,7 @@ contract UniversalProxyTest is Test {
           address(ifo),
           address(rewardDistributionScheduler),
           revenueSharingPools,
+          address(revenueSharingPoolGateway),
           address(cakePlatform)
         )
       )
