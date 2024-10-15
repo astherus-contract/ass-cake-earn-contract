@@ -9,15 +9,14 @@ contract MinterScript is Script {
   function setUp() public {}
 
   function run() public {
-    //    uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-    //    address deployer = vm.addr(deployerPrivateKey);
-    address deployer = msg.sender;
+    uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+    address deployer = vm.addr(deployerPrivateKey);
     console.log("Deployer: %s", deployer);
     address admin = vm.envOr("ADMIN", deployer);
     console.log("Admin: %s", admin);
-    address manager = vm.envOr("MANAGER", deployer);
+    address manager = vm.envOr("MANAGER", admin);
     console.log("Manager: %s", manager);
-    address pauser = vm.envOr("PAUSER", deployer);
+    address pauser = vm.envOr("PAUSER", admin);
     console.log("Pauser: %s", pauser);
     // token
     address token = vm.envAddress("TOKEN");
@@ -50,11 +49,9 @@ contract MinterScript is Script {
     // max swap ratio
     uint256 maxSwapRatio = vm.envUint("MAX_SWAP_RATIO");
 
-    //    vm.startBroadcast(deployerPrivateKey);
-    vm.startBroadcast();
-    address proxy = Upgrades.deployTransparentProxy(
+    vm.startBroadcast(deployerPrivateKey);
+    address proxy = Upgrades.deployUUPSProxy(
       "Minter.sol",
-      admin,
       abi.encodeCall(
         Minter.initialize,
         (
@@ -74,7 +71,5 @@ contract MinterScript is Script {
     console.log("Minter proxy address: %s", proxy);
     address implAddress = Upgrades.getImplementationAddress(proxy);
     console.log("Minter implementation address: %s", implAddress);
-    address proxyAdminAddress = Upgrades.getAdminAddress(proxy);
-    console.log("Minter proxy admin address: %s", proxyAdminAddress);
   }
 }

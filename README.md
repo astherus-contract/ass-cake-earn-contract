@@ -65,13 +65,13 @@ $ anvil
 ### Deploy
 
 ```shell
-$ forge script <path_to_script> --rpc-url <your_rpc_url> --private-key <your_private_key> --broadcast --verify -vvvv
+$ forge script <path_to_script> --rpc-url <your_rpc_url> --private-key <your_private_key> --etherscan-api-key <bscscan-api-key> --broadcast --verify -vvv --via-ir
 # deploy the proxy contract of Minter
-$ forge script script/Minter.s.sol:MinterScript --rpc-url <your_rpc_url> --private-key <your_private_key> --broadcast --verify -vvvv
+$ forge script script/Minter.s.sol:MinterScript --rpc-url <your_rpc_url> --private-key <your_private_key> --etherscan-api-key <bscscan-api-key> --broadcast --verify -vvv --via-ir
 # deploy the implementation contract of Minter
-$ forge script script/MinterImpl.s.sol:MinterImplScript --rpc-url <your_rpc_url> --private-key <your_private_key> --broadcast --verify -vvvv
+$ forge script script/MinterImpl.s.sol:MinterImplScript --rpc-url <your_rpc_url> --private-key <your_private_key> --etherscan-api-key <bscscan-api-key> --broadcast --verify -vvv --via-ir
 # deploy the contract of MockERC20
-$ forge script script/mock/MockERC20.s.sol:MockERC20Script --rpc-url <your_rpc_url> --private-key <your_private_key> --broadcast --verify -vvvv
+$ forge script script/mock/MockERC20.s.sol:MockERC20Script --rpc-url <your_rpc_url> --private-key <your_private_key> --etherscan-api-key <bscscan-api-key> --broadcast --verify -vvv --via-ir
 
 # deploy to local node
 forge script script/mock/MockERC20.s.sol:MockERC20Script

@@ -152,15 +152,20 @@ contract Minter is
 
   /* ============ External Getters ============ */
 
+  /**
+   * @dev estimateTotalOut  get assToken amount
+   * @param _amountIn - amount of token
+   * @param _mintRatio - mint ratio
+   */
   function estimateTotalOut(
     uint256 _amountIn,
     uint256 _mintRatio
   ) public view returns (uint256 minimumEstimatedTotal) {
     require(_mintRatio <= DENOMINATOR, "Incorrect Ratio");
 
-    uint256 buybackAmount = _amountIn -
-      ((_amountIn * _mintRatio) / DENOMINATOR);
-    uint256 mintAmount = _amountIn - buybackAmount;
+    uint256 mintAmount = ((_amountIn * _mintRatio) / DENOMINATOR);
+    uint256 buybackAmount = _amountIn - mintAmount;
+
     uint256 amountOut = 0;
 
     if (buybackAmount > 0) {
@@ -178,24 +183,30 @@ contract Minter is
     return amountOut;
   }
 
+  /**
+   * @dev swapToAssTokens  get assToken amount
+   * @param tokens - amount of token
+   */
   function swapToAssTokens(uint256 tokens) public view returns (uint256) {
     return IPancakeStableSwapPool(pancakeSwapPool).get_dy(0, 1, tokens);
   }
 
+  /**
+   * @dev convertToTokens  get token amount
+   * @param assTokens - amount of assTokens
+   */
   function convertToTokens(uint256 assTokens) public view returns (uint256) {
     uint256 totalSupply = assToken.totalSupply();
-    if (totalSupply == 0 || totalTokens == 0) {
-      return assTokens;
-    }
-    return (assTokens * totalTokens) / totalSupply;
+    return (assTokens * (totalTokens + 1)) / (totalSupply + 1);
   }
 
+  /**
+   * @dev convertToAssTokens  get assToken amount
+   * @param tokens - amount of token
+   */
   function convertToAssTokens(uint256 tokens) public view returns (uint256) {
     uint256 totalSupply = assToken.totalSupply();
-    if (totalSupply == 0 || totalTokens == 0) {
-      return tokens;
-    }
-    return (tokens * totalSupply) / totalTokens;
+    return (tokens * (totalSupply + 1)) / (totalTokens + 1);
   }
 
   // /* ============ External Functions ============ */
@@ -214,6 +225,11 @@ contract Minter is
     return _smartMint(_amountIn, _mintRatio, _minOut);
   }
 
+  /**
+   * @dev compoundRewards
+   * @param _rewardsType - rewards type
+   * @param _amountIn - amount of token
+   */
   function compoundRewards(
     IMinter.RewardsType _rewardsType,
     uint256 _amountIn
@@ -274,8 +290,12 @@ contract Minter is
   /**
    * @dev buyback assToken
    * @param _amountIn - amount of token
+   * @param _minOut - minimum output
    */
-  function _buyback(uint256 _amountIn) private returns (uint256) {
+  function _buyback(
+    uint256 _amountIn,
+    uint256 _minOut
+  ) private returns (uint256) {
     address[] memory tokenPath = new address[](2);
     tokenPath[0] = address(token);
     tokenPath[1] = address(assToken);
@@ -289,7 +309,7 @@ contract Minter is
       tokenPath,
       flag,
       _amountIn,
-      _amountIn,
+      _minOut,
       address(this)
     );
     uint256 newBalance = assToken.balanceOf(address(this));
@@ -313,11 +333,16 @@ contract Minter is
 
   /* ============ Admin Functions ============ */
 
+  /**
+   * @dev updateFeeRate
+   * @param _rewardsType - rewards type
+   * @param _feeRate - fee rate
+   */
   function updateFeeRate(
     RewardsType _rewardsType,
     uint256 _feeRate
   ) external nonReentrant onlyRole(MANAGER) {
-    require(_feeRate <= DENOMINATOR, "Incorrect Fee Ratio");
+    require(_feeRate < DENOMINATOR, "Incorrect Fee Ratio");
 
     uint256 oldFeeRate = 0;
     if (_rewardsType == RewardsType.VeTokenRewards) {
@@ -350,6 +375,11 @@ contract Minter is
     emit FeeRateUpdated(msg.sender, _rewardsType, oldFeeRate, _feeRate);
   }
 
+  /**
+   * @dev withdrawFee
+   * @param receipt - Address of the receipt
+   * @param amountIn - amount of token
+   */
   function withdrawFee(
     address receipt,
     uint256 amountIn
@@ -434,18 +464,18 @@ contract Minter is
 
     token.safeTransferFrom(msg.sender, address(this), _amountIn);
 
-    uint256 buybackAmount = _amountIn -
-      ((_amountIn * _mintRatio) / DENOMINATOR);
-    uint256 mintAmount = _amountIn - buybackAmount;
-    uint256 amountRec = 0;
+    uint256 mintAmount = (_amountIn * _mintRatio) / DENOMINATOR;
+    uint256 buybackAmount = _amountIn - mintAmount;
 
-    if (buybackAmount > 0) {
-      amountRec += _buyback(buybackAmount);
-    }
+    uint256 amountRec = 0;
 
     if (mintAmount > 0) {
       amountRec += _mint(mintAmount);
       totalTokens += mintAmount;
+    }
+
+    if (buybackAmount > 0) {
+      amountRec += _buyback(buybackAmount, _minOut - amountRec);
     }
 
     require(amountRec >= _minOut, "MinOut not match");
