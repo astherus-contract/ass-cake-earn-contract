@@ -255,6 +255,10 @@ contract UniversalProxy is
       totalClaimed
     );
     // create rewards distribution schedule
+    // rewards are collected from 2 source in the form of CAKE token
+    // 1. weekly revenue sharing rewards
+    // 2. weekly veCAKE emission rewards
+    // then collected rewards(totalClaimed) will be distributed in 7 days
     rewardsDistributionScheduler.addRewardsSchedule(
       IMinter.RewardsType.VeTokenRewards,
       totalClaimed,
@@ -298,16 +302,25 @@ contract UniversalProxy is
   ) external onlyRole(MANAGER) whenNotPaused nonReentrant {
     // get deposit token balance before
     uint256 tokenBalanceBefore = token.balanceOf(address(this));
+    // get harvested token amount from IFO
+    uint256 harvestedAmtBefore = IERC20(rewardToken).balanceOf(address(this));
+
     // get harvested token from IFO
     ifo.harvestPool(pid);
+
     // get deposit token balance after
     uint256 tokenBalanceAfter = token.balanceOf(address(this));
+    // get harvested token amount after
+    uint256 harvestedAmtAfter = IERC20(rewardToken).balanceOf(address(this));
+
     // not all tokens are exchanged to IFO tokens
     uint256 refundAmt = tokenBalanceAfter - tokenBalanceBefore;
+    // harvested token amount
+    uint256 harvestedAmt = harvestedAmtAfter - harvestedAmtBefore;
+
     // record diff. into ifoPositions
     ifoPositions[pid] = refundAmt;
-    // get harvested token amount from IFO
-    uint256 harvestedAmt = IERC20(rewardToken).balanceOf(address(this));
+
     // send deposited token and reward tokens back to msg.sender
     if (refundAmt > 0) {
       token.safeTransfer(msg.sender, refundAmt);
