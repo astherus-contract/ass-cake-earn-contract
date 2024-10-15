@@ -169,11 +169,7 @@ contract Minter is
     uint256 amountOut = 0;
 
     if (buybackAmount > 0) {
-      amountOut += IPancakeStableSwapPool(pancakeSwapPool).get_dy(
-        0,
-        1,
-        buybackAmount
-      );
+      amountOut += swapToAssTokens(buybackAmount);
     }
 
     if (mintAmount > 0) {
@@ -197,6 +193,9 @@ contract Minter is
    */
   function convertToTokens(uint256 assTokens) public view returns (uint256) {
     uint256 totalSupply = assToken.totalSupply();
+    //why +1？
+    //When using the contract for the first time, totalTokens and totalSupply are both 0.
+    //After calling smartMint and mint assToken, totalTokens and totalSupply are not 0.
     return (assTokens * (totalTokens + 1)) / (totalSupply + 1);
   }
 
@@ -206,6 +205,9 @@ contract Minter is
    */
   function convertToAssTokens(uint256 tokens) public view returns (uint256) {
     uint256 totalSupply = assToken.totalSupply();
+    //why +1？
+    //When using the contract for the first time, totalTokens and totalSupply are both 0.
+    //After calling smartMint and mint assToken, totalTokens and totalSupply are not 0.
     return (tokens * (totalSupply + 1)) / (totalTokens + 1);
   }
 
@@ -458,7 +460,7 @@ contract Minter is
     uint256 _amountIn,
     uint256 _mintRatio,
     uint256 _minOut
-  ) internal returns (uint256) {
+  ) private returns (uint256) {
     require(_amountIn > 0, "Invalid amount");
     require(_mintRatio <= DENOMINATOR, "Incorrect Ratio");
 
