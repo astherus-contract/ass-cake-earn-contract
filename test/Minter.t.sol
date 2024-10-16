@@ -53,16 +53,10 @@ contract MinterTest is Test {
     assToken = AssToken(assTokenProxy);
     console.log("AssToken proxy address: %s", assTokenProxy);
     // deploy mock pancake swap contract
-    pancakeSwapPool = new MockPancakeStableSwapPool(
-      address(token),
-      assTokenProxy,
-      1e5
-    );
+    pancakeSwapPool = new MockPancakeStableSwapPool(address(token), assTokenProxy, 1e5);
     console.log("pancakeSwapPool address: %s", address(pancakeSwapPool));
     // deploy mock pancake swap router
-    pancakeSwapRouter = new MockPancakeStableSwapRouter(
-      address(pancakeSwapPool)
-    );
+    pancakeSwapRouter = new MockPancakeStableSwapRouter(address(pancakeSwapPool));
     console.log("pancakeSwapRouter address: %s", address(pancakeSwapRouter));
     // transfer cake to swap contract
     token.transfer(address(pancakeSwapPool), 1000 ether);
@@ -210,13 +204,10 @@ contract MinterTest is Test {
     vm.startPrank(user1);
     //    uint256 amountIn = 10 ether;
     //    uint256 mintRatio = 1_000;
-    uint256 mintAssTokenAmount = (((convertToAssTokens * amountIn) / 1 ether) *
-      mintRatio) / minter.DENOMINATOR();
-    uint256 buybackAssTokenAmount = ((amountIn -
-      (amountIn * mintRatio) /
-      minter.DENOMINATOR()) * swapToAssTokens) / 1 ether;
-    uint256 userReceiveAssTokenAmount = mintAssTokenAmount +
-      buybackAssTokenAmount;
+    uint256 mintAssTokenAmount = (((convertToAssTokens * amountIn) / 1 ether) * mintRatio) / minter.DENOMINATOR();
+    uint256 buybackAssTokenAmount = ((amountIn - (amountIn * mintRatio) / minter.DENOMINATOR()) * swapToAssTokens) /
+      1 ether;
+    uint256 userReceiveAssTokenAmount = mintAssTokenAmount + buybackAssTokenAmount;
     uint256 minOut = userReceiveAssTokenAmount;
     uint256 estimateTotalOut = minter.estimateTotalOut(amountIn, mintRatio);
     assertEq(estimateTotalOut, minOut);
@@ -236,32 +227,20 @@ contract MinterTest is Test {
     uint256 afterTotalSupply = IERC20(assToken).totalSupply();
     uint256 afterUserAssTokenBalance = IERC20(assToken).balanceOf(user1);
 
-    assertEq(
-      afterTotalTokens - beforeTotalTokens,
-      (amountIn * mintRatio) / minter.DENOMINATOR()
-    );
+    assertEq(afterTotalTokens - beforeTotalTokens, (amountIn * mintRatio) / minter.DENOMINATOR());
     assertEq(afterMinterBalance - beforeMinterBalance, 0);
     assertEq(afterTotalSupply - beforeTotalSupply, mintAssTokenAmount);
     assertEq(beforeUserTokenBalance - afterUserTokenBalance, amountIn);
-    assertEq(
-      afterUserAssTokenBalance - beforeUserAssTokenBalance,
-      userReceiveAssTokenAmount
-    );
+    assertEq(afterUserAssTokenBalance - beforeUserAssTokenBalance, userReceiveAssTokenAmount);
     assertEq(result, userReceiveAssTokenAmount);
 
     uint256 assTokenTotalSupply = IERC20(assToken).totalSupply();
 
     //(tokens * (totalSupply+1)) / (totalTokens+1)
-    assertEq(
-      (1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1),
-      minter.convertToAssTokens(1 ether)
-    );
+    assertEq((1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1), minter.convertToAssTokens(1 ether));
 
     //(assTokens * (totalTokens+1)) / (totalSupply+1)
-    assertEq(
-      (1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1),
-      minter.convertToTokens(1 ether)
-    );
+    assertEq((1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1), minter.convertToTokens(1 ether));
 
     vm.stopPrank();
   }
@@ -286,11 +265,8 @@ contract MinterTest is Test {
     vm.startPrank(user1);
 
     uint256 mintRatio = 0;
-    uint256 mintAssTokenAmount = (((convertToAssTokens * amountIn) / 1 ether) *
-      mintRatio) / minter.DENOMINATOR();
-    uint256 buybackAssTokenAmount = amountIn -
-      (amountIn * mintRatio) /
-      minter.DENOMINATOR();
+    uint256 mintAssTokenAmount = (((convertToAssTokens * amountIn) / 1 ether) * mintRatio) / minter.DENOMINATOR();
+    uint256 buybackAssTokenAmount = amountIn - (amountIn * mintRatio) / minter.DENOMINATOR();
 
     //_mintRatio=0
     estimateTotalOut = minter.estimateTotalOut(amountIn, mintRatio);
@@ -298,25 +274,15 @@ contract MinterTest is Test {
 
     //_mintRatio=1_0000
     mintRatio = 1_0000;
-    mintAssTokenAmount =
-      (((convertToAssTokens * amountIn) / 1 ether) * mintRatio) /
-      minter.DENOMINATOR();
-    buybackAssTokenAmount =
-      amountIn -
-      (amountIn * mintRatio) /
-      minter.DENOMINATOR();
+    mintAssTokenAmount = (((convertToAssTokens * amountIn) / 1 ether) * mintRatio) / minter.DENOMINATOR();
+    buybackAssTokenAmount = amountIn - (amountIn * mintRatio) / minter.DENOMINATOR();
     estimateTotalOut = minter.estimateTotalOut(amountIn, mintRatio);
     assertEq(estimateTotalOut, mintAssTokenAmount + buybackAssTokenAmount);
 
     //_mintRatio=5000
     mintRatio = 5000;
-    mintAssTokenAmount =
-      (((convertToAssTokens * amountIn) / 1 ether) * mintRatio) /
-      minter.DENOMINATOR();
-    buybackAssTokenAmount =
-      amountIn -
-      (amountIn * mintRatio) /
-      minter.DENOMINATOR();
+    mintAssTokenAmount = (((convertToAssTokens * amountIn) / 1 ether) * mintRatio) / minter.DENOMINATOR();
+    buybackAssTokenAmount = amountIn - (amountIn * mintRatio) / minter.DENOMINATOR();
     estimateTotalOut = minter.estimateTotalOut(amountIn, mintRatio);
     assertEq(estimateTotalOut, mintAssTokenAmount + buybackAssTokenAmount);
   }
@@ -354,10 +320,7 @@ contract MinterTest is Test {
     uint256 veTokenRewardsFeeRate = 1000;
 
     vm.startPrank(manager);
-    minter.updateFeeRate(
-      IMinter.RewardsType.VeTokenRewards,
-      veTokenRewardsFeeRate
-    );
+    minter.updateFeeRate(IMinter.RewardsType.VeTokenRewards, veTokenRewardsFeeRate);
     vm.stopPrank();
 
     //compound VeTokenRewards success
@@ -392,16 +355,10 @@ contract MinterTest is Test {
     uint256 assTokenTotalSupply = IERC20(assToken).totalSupply();
 
     //(tokens * totalSupply) / totalTokens
-    assertEq(
-      (1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1),
-      minter.convertToAssTokens(1 ether)
-    );
+    assertEq((1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1), minter.convertToAssTokens(1 ether));
 
     //(assTokens * (totalTokens+1)) / (totalSupply+1)
-    assertEq(
-      (1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1),
-      minter.convertToTokens(1 ether)
-    );
+    assertEq((1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1), minter.convertToTokens(1 ether));
 
     vm.stopPrank();
   }
@@ -448,16 +405,10 @@ contract MinterTest is Test {
 
     uint256 assTokenTotalSupply = IERC20(assToken).totalSupply();
     //(tokens * (totalSupply+1)) / (totalTokens+1)
-    assertEq(
-      (1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1),
-      minter.convertToAssTokens(1 ether)
-    );
+    assertEq((1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1), minter.convertToAssTokens(1 ether));
 
     //(assTokens * (totalTokens+1)) / (totalSupply+1)
-    assertEq(
-      (1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1),
-      minter.convertToTokens(1 ether)
-    );
+    assertEq((1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1), minter.convertToTokens(1 ether));
 
     vm.stopPrank();
   }
@@ -504,16 +455,10 @@ contract MinterTest is Test {
 
     uint256 assTokenTotalSupply = IERC20(assToken).totalSupply();
     //(tokens * (totalSupply+1)) / (totalTokens+1)
-    assertEq(
-      (1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1),
-      minter.convertToAssTokens(1 ether)
-    );
+    assertEq((1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1), minter.convertToAssTokens(1 ether));
 
     //(assTokens * (totalTokens+1)) / (totalSupply+1)
-    assertEq(
-      (1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1),
-      minter.convertToTokens(1 ether)
-    );
+    assertEq((1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1), minter.convertToTokens(1 ether));
 
     vm.stopPrank();
   }

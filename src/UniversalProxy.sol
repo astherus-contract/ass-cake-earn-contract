@@ -107,19 +107,10 @@ contract UniversalProxy is
     require(_veToken != address(0), "Invalid veToken address");
     require(_gaugeVoting != address(0), "Invalid gaugeVoting address");
     require(_ifo != address(0), "Invalid ifo address");
-    require(
-      _revenueSharingPoolGateway != address(0),
-      "Invalid revenueSharingPoolGateway address"
-    );
+    require(_revenueSharingPoolGateway != address(0), "Invalid revenueSharingPoolGateway address");
     require(_cakePlatform != address(0), "Invalid cakePlatform address");
-    require(
-      _rewardDistributionScheduler != address(0),
-      "Invalid rewardDistributionScheduler address"
-    );
-    require(
-      _revenueSharingPools.length > 0,
-      "revenueSharingPools must have at least one address"
-    );
+    require(_rewardDistributionScheduler != address(0), "Invalid rewardDistributionScheduler address");
+    require(_revenueSharingPools.length > 0, "revenueSharingPools must have at least one address");
 
     __Pausable_init();
     __ReentrancyGuard_init();
@@ -135,12 +126,8 @@ contract UniversalProxy is
     gaugeVoting = IGaugeVoting(_gaugeVoting);
     ifo = IIFOV8(_ifo);
     revenueSharingPools = _revenueSharingPools;
-    revenueSharingPoolGateway = IRevenueSharingPoolGateway(
-      _revenueSharingPoolGateway
-    );
-    rewardsDistributionScheduler = IRewardDistributionScheduler(
-      _rewardDistributionScheduler
-    );
+    revenueSharingPoolGateway = IRevenueSharingPoolGateway(_revenueSharingPoolGateway);
+    rewardsDistributionScheduler = IRewardDistributionScheduler(_rewardDistributionScheduler);
     cakePlatform = ICakePlatform(_cakePlatform);
   }
 
@@ -156,9 +143,7 @@ contract UniversalProxy is
    * @dev token will be transferred from MINTER
    * @param amount - amount to lock
    */
-  function lock(
-    uint256 amount
-  ) external override onlyRole(MINTER) whenNotPaused {
+  function lock(uint256 amount) external override onlyRole(MINTER) whenNotPaused {
     require(amount > 0, "value must greater than 0");
     // transfer token from minter to this contract
     token.safeTransferFrom(msg.sender, address(this), amount);
@@ -217,13 +202,7 @@ contract UniversalProxy is
     bool skipNative,
     bool skipProxy
   ) external onlyRole(MANAGER) whenNotPaused {
-    gaugeVoting.voteForGaugeWeightsBulk(
-      gaugeAddrs,
-      userWeights,
-      chainIds,
-      skipNative,
-      skipProxy
-    );
+    gaugeVoting.voteForGaugeWeightsBulk(gaugeAddrs, userWeights, chainIds, skipNative, skipProxy);
   }
 
   /**
@@ -232,28 +211,17 @@ contract UniversalProxy is
    *      for more info of PCS's voting, plz refer to:
    *      https://developer.pancakeswap.finance/contracts/vecake-and-gauge-voting
    */
-  function claimVeTokenRewards()
-    external
-    onlyRole(BOT)
-    whenNotPaused
-    nonReentrant
-  {
+  function claimVeTokenRewards() external onlyRole(BOT) whenNotPaused nonReentrant {
     // get reward token balance before
     uint256 tokenBalanceBefore = token.balanceOf(address(this));
     // claim rewards from revenueSharingPoolGateway
-    revenueSharingPoolGateway.claimMultipleWithoutProxy(
-      revenueSharingPools,
-      address(this)
-    );
+    revenueSharingPoolGateway.claimMultipleWithoutProxy(revenueSharingPools, address(this));
     // get balance after the claim
     uint256 tokenBalanceAfter = token.balanceOf(address(this));
     // calculate total claimed rewards
     uint256 totalClaimed = tokenBalanceAfter - tokenBalanceBefore;
     // approve rewardsDistributionScheduler to spend reward tokens
-    token.safeIncreaseAllowance(
-      address(rewardsDistributionScheduler),
-      totalClaimed
-    );
+    token.safeIncreaseAllowance(address(rewardsDistributionScheduler), totalClaimed);
     // create rewards distribution schedule
     // rewards are collected from 2 source in the form of CAKE token
     // 1. weekly revenue sharing rewards
@@ -276,10 +244,7 @@ contract UniversalProxy is
    * @param pid - pool id
    * @param amount - amount to deposit
    */
-  function depositIFO(
-    uint8 pid,
-    uint256 amount
-  ) external onlyRole(MANAGER) whenNotPaused {
+  function depositIFO(uint8 pid, uint256 amount) external onlyRole(MANAGER) whenNotPaused {
     require(amount > 0, "amount must be greater than 0");
     require(pid >= 0, "invalid pid");
     // transfer token from multi-sig wallet to here
@@ -296,10 +261,7 @@ contract UniversalProxy is
    * @param pid - pool id
    * @param rewardToken - reward token address
    */
-  function harvestIFO(
-    uint8 pid,
-    address rewardToken
-  ) external onlyRole(MANAGER) whenNotPaused nonReentrant {
+  function harvestIFO(uint8 pid, address rewardToken) external onlyRole(MANAGER) whenNotPaused nonReentrant {
     // get deposit token balance before
     uint256 tokenBalanceBefore = token.balanceOf(address(this));
     // get harvested token amount from IFO
@@ -341,9 +303,7 @@ contract UniversalProxy is
    *      or recipient parameter provided if called by msg.sender.
    * @param recipient - address of the recipient
    */
-  function setRecipient(
-    address recipient
-  ) external onlyRole(MANAGER) whenNotPaused {
+  function setRecipient(address recipient) external onlyRole(MANAGER) whenNotPaused {
     // if zero address is set, then msg.sender will be used as recipient
     // recipient can't be zero address
     require(recipient != address(0), "Invalid recipient address");
@@ -357,9 +317,7 @@ contract UniversalProxy is
    *      StakeDao's CakePlatform (please refer to it's vote market)
    * @param ids - Bounty IDs
    */
-  function claimRewardsFromStakeDao(
-    uint256[] calldata ids
-  ) external whenNotPaused {
+  function claimRewardsFromStakeDao(uint256[] calldata ids) external whenNotPaused {
     // claim rewards from multiple bounties
     cakePlatform.claimAllFor(address(this), ids);
   }
@@ -371,9 +329,7 @@ contract UniversalProxy is
    * @dev set revenue sharing pools
    * @param poolIds - array of pool ids
    */
-  function setRevenuePoolIds(
-    address[] memory poolIds
-  ) external onlyRole(MANAGER) {
+  function setRevenuePoolIds(address[] memory poolIds) external onlyRole(MANAGER) {
     revenueSharingPools = poolIds;
     emit RevenuePoolIdsSet(poolIds);
   }
@@ -392,7 +348,5 @@ contract UniversalProxy is
     _pause();
   }
 
-  function _authorizeUpgrade(
-    address newImplementation
-  ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+  function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }

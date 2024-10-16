@@ -40,8 +40,7 @@ contract UniversalProxyTest is Test {
   address veCakeOwner = 0xe6cdC66A96458FbF11F632B50964153fBDa78548;
   // BSC veCake
   IVeCake veToken = IVeCake(0x5692DB8177a81A6c6afc8084C2976C9933EC1bAB);
-  altIVeToken altVeToken =
-    altIVeToken(0x5692DB8177a81A6c6afc8084C2976C9933EC1bAB);
+  altIVeToken altVeToken = altIVeToken(0x5692DB8177a81A6c6afc8084C2976C9933EC1bAB);
   MockGaugeVoting gaugeVoting;
   MockIFO ifo;
   RewardDistributionScheduler rewardDistributionScheduler;
@@ -75,24 +74,15 @@ contract UniversalProxyTest is Test {
     // deploy rewardDistributionScheduler proxy
     address rdsProxy = Upgrades.deployUUPSProxy(
       "RewardDistributionScheduler.sol",
-      abi.encodeCall(
-        RewardDistributionScheduler.initialize,
-        (admin, address(token), minter, manager)
-      )
+      abi.encodeCall(RewardDistributionScheduler.initialize, (admin, address(token), minter, manager))
     );
-    rewardDistributionScheduler = RewardDistributionScheduler(
-      address(rdsProxy)
-    );
+    rewardDistributionScheduler = RewardDistributionScheduler(address(rdsProxy));
     console.log("RewardDistributionScheduler address: %s", address(rdsProxy));
 
     // deploy revenueSharingPools
     revenueSharingPools = new address[](2);
-    revenueSharingPools[0] = address(
-      new MockRevenueSharingPool(address(token))
-    );
-    revenueSharingPools[1] = address(
-      new MockRevenueSharingPool(address(token))
-    );
+    revenueSharingPools[0] = address(new MockRevenueSharingPool(address(token)));
+    revenueSharingPools[1] = address(new MockRevenueSharingPool(address(token)));
     // give some reward token to pools
     deal(address(token), revenueSharingPools[0], 1000 ether);
     deal(address(token), revenueSharingPools[1], 1000 ether);
@@ -132,10 +122,7 @@ contract UniversalProxyTest is Test {
 
     // grant universalProxy as admin of rewardDistributionScheduler
     vm.startPrank(admin);
-    rewardDistributionScheduler.grantRole(
-      rewardDistributionScheduler.MANAGER(),
-      address(universalProxy)
-    );
+    rewardDistributionScheduler.grantRole(rewardDistributionScheduler.MANAGER(), address(universalProxy));
     vm.stopPrank();
 
     // add universalProxy into veCake whitelist

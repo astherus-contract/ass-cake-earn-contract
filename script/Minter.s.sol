@@ -30,10 +30,7 @@ contract MinterScript is Script {
 
     // universalProxy address
     address universalProxy = vm.envAddress("UNIVERSAL_PROXY");
-    require(
-      universalProxy != address(0),
-      "universalProxy address cannot be null"
-    );
+    require(universalProxy != address(0), "universalProxy address cannot be null");
     console.log("universalProxy: %s", universalProxy);
 
     // swap router
@@ -54,17 +51,7 @@ contract MinterScript is Script {
       "Minter.sol",
       abi.encodeCall(
         Minter.initialize,
-        (
-          admin,
-          manager,
-          pauser,
-          token,
-          assToken,
-          universalProxy,
-          swapRouter,
-          smartPool,
-          maxSwapRatio
-        )
+        (admin, manager, pauser, token, assToken, universalProxy, swapRouter, smartPool, maxSwapRatio)
       )
     );
     vm.stopBroadcast();

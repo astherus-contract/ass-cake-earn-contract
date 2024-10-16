@@ -43,12 +43,7 @@ contract Buyback is
   uint256 public totalBought;
 
   /* ============ Events ============ */
-  event BoughtBack(
-    address indexed tokenIn,
-    address indexed tokenOut,
-    uint256 amountIn,
-    uint256 amountOut
-  );
+  event BoughtBack(address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut);
   event ReceiverChanged(address indexed receiver);
   event OneInchRouterChanged(address indexed oneInchRouter, bool added);
   event SwapSrcTokenChanged(address indexed srcToken, bool added);
@@ -100,29 +95,17 @@ contract Buyback is
     address _1inchRouter,
     bytes calldata swapData
   ) external override onlyRole(BOT) nonReentrant whenNotPaused {
-    require(
-      oneInchRouterWhitelist[_1inchRouter],
-      "1inchRouter not whitelisted"
-    );
+    require(oneInchRouterWhitelist[_1inchRouter], "1inchRouter not whitelisted");
 
     // Get data (swapData) from https://api.1inch.dev/swap/v6.0/56/swap without making any changes and pass it to the contract method
-    (, SwapDescription memory swapDesc, ) = abi.decode(
-      swapData[4:],
-      (address, SwapDescription, bytes)
-    );
+    (, SwapDescription memory swapDesc, ) = abi.decode(swapData[4:], (address, SwapDescription, bytes));
 
-    require(
-      swapSrcTokenWhitelist[address(swapDesc.srcToken)],
-      "srcToken not whitelisted"
-    );
+    require(swapSrcTokenWhitelist[address(swapDesc.srcToken)], "srcToken not whitelisted");
     require(address(swapDesc.dstToken) == swapDstToken, "invalid dstToken");
     require(swapDesc.dstReceiver == receiver, "invalid dstReceiver");
 
     require(swapDesc.amount > 0, "invalid amount");
-    require(
-      swapDesc.srcToken.balanceOf(address(this)) >= swapDesc.amount,
-      "insufficient balance"
-    );
+    require(swapDesc.srcToken.balanceOf(address(this)) >= swapDesc.amount, "insufficient balance");
 
     swapDesc.srcToken.safeIncreaseAllowance(_1inchRouter, swapDesc.amount);
     uint256 beforeBalance = swapDesc.dstToken.balanceOf(receiver);
@@ -141,12 +124,7 @@ contract Buyback is
     uint256 today = (block.timestamp / DAY) * DAY;
     dailyBought[today] = dailyBought[today] + amountOut;
 
-    emit BoughtBack(
-      address(swapDesc.srcToken),
-      address(swapDesc.dstToken),
-      swapDesc.amount,
-      amountOut
-    );
+    emit BoughtBack(address(swapDesc.srcToken), address(swapDesc.dstToken), swapDesc.amount, amountOut);
   }
 
   /**
@@ -165,13 +143,8 @@ contract Buyback is
    * @dev add1InchRouterWhitelist
    * @param oneInchRouter - Address of the oneInchRouter
    */
-  function add1InchRouterWhitelist(
-    address oneInchRouter
-  ) external onlyRole(MANAGER) {
-    require(
-      !oneInchRouterWhitelist[oneInchRouter],
-      "oneInchRouter already whitelisted"
-    );
+  function add1InchRouterWhitelist(address oneInchRouter) external onlyRole(MANAGER) {
+    require(!oneInchRouterWhitelist[oneInchRouter], "oneInchRouter already whitelisted");
 
     oneInchRouterWhitelist[oneInchRouter] = true;
     emit OneInchRouterChanged(oneInchRouter, true);
@@ -181,13 +154,8 @@ contract Buyback is
    * @dev remove1InchRouterWhitelist
    * @param oneInchRouter - Address of the oneInchRouter
    */
-  function remove1InchRouterWhitelist(
-    address oneInchRouter
-  ) external onlyRole(MANAGER) {
-    require(
-      oneInchRouterWhitelist[oneInchRouter],
-      "oneInchRouter not whitelisted"
-    );
+  function remove1InchRouterWhitelist(address oneInchRouter) external onlyRole(MANAGER) {
+    require(oneInchRouterWhitelist[oneInchRouter], "oneInchRouter not whitelisted");
 
     delete oneInchRouterWhitelist[oneInchRouter];
     emit OneInchRouterChanged(oneInchRouter, false);
@@ -197,9 +165,7 @@ contract Buyback is
    * @dev addSwapSrcTokenWhitelist
    * @param srcToken - Address of the srcToken
    */
-  function addSwapSrcTokenWhitelist(
-    address srcToken
-  ) external onlyRole(MANAGER) {
+  function addSwapSrcTokenWhitelist(address srcToken) external onlyRole(MANAGER) {
     require(!swapSrcTokenWhitelist[srcToken], "srcToken already whitelisted");
 
     swapSrcTokenWhitelist[srcToken] = true;
@@ -210,9 +176,7 @@ contract Buyback is
    * @dev removeSwapSrcTokenWhitelist
    * @param srcToken - Address of the srcToken
    */
-  function removeSwapSrcTokenWhitelist(
-    address srcToken
-  ) external onlyRole(MANAGER) {
+  function removeSwapSrcTokenWhitelist(address srcToken) external onlyRole(MANAGER) {
     require(swapSrcTokenWhitelist[srcToken], "srcToken not whitelisted");
 
     delete swapSrcTokenWhitelist[srcToken];
@@ -235,7 +199,5 @@ contract Buyback is
 
   // /* ============ Internal Functions ============ */
 
-  function _authorizeUpgrade(
-    address newImplementation
-  ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+  function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }

@@ -56,12 +56,7 @@ contract RewardDistributionScheduler is
    * @param _minter - Address of the minter
    * @param _manager - Address of the manager
    */
-  function initialize(
-    address _admin,
-    address _token,
-    address _minter,
-    address _manager
-  ) external override initializer {
+  function initialize(address _admin, address _token, address _minter, address _manager) external override initializer {
     require(_admin != address(0), "Invalid admin address");
     require(_token != address(0), "Invalid token address");
     require(_minter != address(0), "Invalid minter address");
@@ -113,36 +108,20 @@ contract RewardDistributionScheduler is
     for (uint256 i; i < _epochs; i++) {
       epochs[startTime + i * 1 days][_rewardsType] += amountPerDay;
     }
-    emit RewardsScheduleAdded(
-      msg.sender,
-      _rewardsType,
-      _amount,
-      _epochs,
-      startTime
-    );
+    emit RewardsScheduleAdded(msg.sender, _rewardsType, _amount, _epochs, startTime);
   }
 
   /**
    * @dev executeRewardSchedules per day
    */
-  function executeRewardSchedules()
-    external
-    override
-    onlyRole(BOT)
-    nonReentrant
-    whenNotPaused
-  {
+  function executeRewardSchedules() external override onlyRole(BOT) nonReentrant whenNotPaused {
     uint256 currentTimestamp = (block.timestamp / 1 days) * 1 days;
     uint max = (uint)(type(IMinter.RewardsType).max);
 
     while (lastDistributeRewardsTimestamp <= currentTimestamp) {
       for (uint j; j < max; j++) {
-        if (
-          epochs[lastDistributeRewardsTimestamp][IMinter.RewardsType(j)] != 0
-        ) {
-          uint256 amount = epochs[lastDistributeRewardsTimestamp][
-            IMinter.RewardsType(j)
-          ];
+        if (epochs[lastDistributeRewardsTimestamp][IMinter.RewardsType(j)] != 0) {
+          uint256 amount = epochs[lastDistributeRewardsTimestamp][IMinter.RewardsType(j)];
           IERC20(token).safeIncreaseAllowance(minter, amount);
 
           delete epochs[lastDistributeRewardsTimestamp][IMinter.RewardsType(j)];
@@ -169,7 +148,5 @@ contract RewardDistributionScheduler is
 
   // /* ============ Internal Functions ============ */
 
-  function _authorizeUpgrade(
-    address newImplementation
-  ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+  function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }

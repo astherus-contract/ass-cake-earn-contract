@@ -63,11 +63,7 @@ contract Minter is
   address public universalProxy;
 
   /* ============ Events ============ */
-  event SmartMinted(
-    address indexed user,
-    uint256 cakeInput,
-    uint256 obtainedAssCake
-  );
+  event SmartMinted(address indexed user, uint256 cakeInput, uint256 obtainedAssCake);
   event RewardsCompounded(
     address indexed sender,
     RewardsType rewardsType,
@@ -75,21 +71,10 @@ contract Minter is
     uint256 lockAmount,
     uint256 fee
   );
-  event FeeRateUpdated(
-    address indexed sender,
-    RewardsType rewardsType,
-    uint256 oldFeeRate,
-    uint256 newFeeRate
-  );
+  event FeeRateUpdated(address indexed sender, RewardsType rewardsType, uint256 oldFeeRate, uint256 newFeeRate);
   event FeeWithdrawn(address indexed sender, address receipt, uint256 amountIn);
-  event PancakeSwapRouterChanged(
-    address indexed sender,
-    address indexed pancakeSwapRouter
-  );
-  event PancakeSwapPoolChanged(
-    address indexed sender,
-    address indexed pancakeSwapPool
-  );
+  event PancakeSwapRouterChanged(address indexed sender, address indexed pancakeSwapRouter);
+  event PancakeSwapPoolChanged(address indexed sender, address indexed pancakeSwapPool);
   event MaxSwapRatioChanged(address indexed sender, uint256 maxSwapRatio);
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -126,14 +111,8 @@ contract Minter is
     require(_token != address(0), "Invalid token address");
     require(_assToken != address(0), "Invalid AssToken address");
     require(_universalProxy != address(0), "Invalid universalProxy address");
-    require(
-      _pancakeSwapRouter != address(0),
-      "Invalid pancake swap router address"
-    );
-    require(
-      _pancakeSwapPool != address(0),
-      "Invalid pancake swap pool address"
-    );
+    require(_pancakeSwapRouter != address(0), "Invalid pancake swap router address");
+    require(_pancakeSwapPool != address(0), "Invalid pancake swap pool address");
     require(_maxSwapRatio <= DENOMINATOR, "Invalid max swap ratio");
 
     __Pausable_init();
@@ -157,10 +136,7 @@ contract Minter is
    * @param _amountIn - amount of token
    * @param _mintRatio - mint ratio
    */
-  function estimateTotalOut(
-    uint256 _amountIn,
-    uint256 _mintRatio
-  ) public view returns (uint256 minimumEstimatedTotal) {
+  function estimateTotalOut(uint256 _amountIn, uint256 _mintRatio) public view returns (uint256 minimumEstimatedTotal) {
     require(_mintRatio <= DENOMINATOR, "Incorrect Ratio");
 
     uint256 mintAmount = ((_amountIn * _mintRatio) / DENOMINATOR);
@@ -265,13 +241,7 @@ contract Minter is
       IUniversalProxy(universalProxy).lock(lockAmount);
     }
 
-    emit RewardsCompounded(
-      msg.sender,
-      _rewardsType,
-      _amountIn,
-      lockAmount,
-      fee
-    );
+    emit RewardsCompounded(msg.sender, _rewardsType, _amountIn, lockAmount, fee);
   }
 
   /**
@@ -294,10 +264,7 @@ contract Minter is
    * @param _amountIn - amount of token
    * @param _minOut - minimum output
    */
-  function _buyback(
-    uint256 _amountIn,
-    uint256 _minOut
-  ) private returns (uint256) {
+  function _buyback(uint256 _amountIn, uint256 _minOut) private returns (uint256) {
     address[] memory tokenPath = new address[](2);
     tokenPath[0] = address(token);
     tokenPath[1] = address(assToken);
@@ -340,34 +307,22 @@ contract Minter is
    * @param _rewardsType - rewards type
    * @param _feeRate - fee rate
    */
-  function updateFeeRate(
-    RewardsType _rewardsType,
-    uint256 _feeRate
-  ) external nonReentrant onlyRole(MANAGER) {
+  function updateFeeRate(RewardsType _rewardsType, uint256 _feeRate) external nonReentrant onlyRole(MANAGER) {
     require(_feeRate < DENOMINATOR, "Incorrect Fee Ratio");
 
     uint256 oldFeeRate = 0;
     if (_rewardsType == RewardsType.VeTokenRewards) {
-      require(
-        veTokenRewardsFeeRate != _feeRate,
-        "newFeeRate can not be equal oldFeeRate"
-      );
+      require(veTokenRewardsFeeRate != _feeRate, "newFeeRate can not be equal oldFeeRate");
 
       oldFeeRate = veTokenRewardsFeeRate;
       veTokenRewardsFeeRate = _feeRate;
     } else if (_rewardsType == RewardsType.VoteRewards) {
-      require(
-        voteRewardsFeeRate != _feeRate,
-        "newFeeRate can not be equal oldFeeRate"
-      );
+      require(voteRewardsFeeRate != _feeRate, "newFeeRate can not be equal oldFeeRate");
 
       oldFeeRate = voteRewardsFeeRate;
       voteRewardsFeeRate = _feeRate;
     } else if (_rewardsType == RewardsType.Donate) {
-      require(
-        donateRewardsFeeRate != _feeRate,
-        "newFeeRate can not be equal oldFeeRate"
-      );
+      require(donateRewardsFeeRate != _feeRate, "newFeeRate can not be equal oldFeeRate");
 
       oldFeeRate = donateRewardsFeeRate;
       donateRewardsFeeRate = _feeRate;
@@ -382,10 +337,7 @@ contract Minter is
    * @param receipt - Address of the receipt
    * @param amountIn - amount of token
    */
-  function withdrawFee(
-    address receipt,
-    uint256 amountIn
-  ) external nonReentrant onlyRole(MANAGER) {
+  function withdrawFee(address receipt, uint256 amountIn) external nonReentrant onlyRole(MANAGER) {
     require(receipt != address(0), "Invalid address");
     require(amountIn > 0, "Invalid amount");
     require(amountIn <= totalFee, "Invalid amount");
@@ -400,17 +352,9 @@ contract Minter is
    * @dev changePancakeSwapRouter
    * @param _pancakeSwapRouter - Address of the pancakeSwapRouter
    */
-  function changePancakeSwapRouter(
-    address _pancakeSwapRouter
-  ) external onlyRole(MANAGER) {
-    require(
-      _pancakeSwapRouter != address(0),
-      "_pancakeSwapRouter is the zero address"
-    );
-    require(
-      _pancakeSwapRouter != pancakeSwapRouter,
-      "_pancakeSwapRouter is the same"
-    );
+  function changePancakeSwapRouter(address _pancakeSwapRouter) external onlyRole(MANAGER) {
+    require(_pancakeSwapRouter != address(0), "_pancakeSwapRouter is the zero address");
+    require(_pancakeSwapRouter != pancakeSwapRouter, "_pancakeSwapRouter is the same");
 
     pancakeSwapRouter = _pancakeSwapRouter;
     emit PancakeSwapRouterChanged(msg.sender, _pancakeSwapRouter);
@@ -420,17 +364,9 @@ contract Minter is
    * @dev changePancakeSwapPool
    * @param _pancakeSwapPool - Address of the pancakeSwapPool
    */
-  function changePancakeSwapPool(
-    address _pancakeSwapPool
-  ) external onlyRole(MANAGER) {
-    require(
-      _pancakeSwapPool != address(0),
-      "_pancakeSwapPool is the zero address"
-    );
-    require(
-      _pancakeSwapPool != pancakeSwapPool,
-      "_pancakeSwapPool is the same"
-    );
+  function changePancakeSwapPool(address _pancakeSwapPool) external onlyRole(MANAGER) {
+    require(_pancakeSwapPool != address(0), "_pancakeSwapPool is the zero address");
+    require(_pancakeSwapPool != pancakeSwapPool, "_pancakeSwapPool is the same");
 
     pancakeSwapPool = _pancakeSwapPool;
     emit PancakeSwapPoolChanged(msg.sender, _pancakeSwapPool);
@@ -440,9 +376,7 @@ contract Minter is
    * @dev changeMaxSwapRatio
    * @param _maxSwapRatio - Address of the maxSwapRatio
    */
-  function changeMaxSwapRatio(
-    uint256 _maxSwapRatio
-  ) external onlyRole(MANAGER) {
+  function changeMaxSwapRatio(uint256 _maxSwapRatio) external onlyRole(MANAGER) {
     require(_maxSwapRatio <= DENOMINATOR, "Invalid max swap ratio");
     require(_maxSwapRatio != maxSwapRatio, "_maxSwapRatio is the same");
 
@@ -452,15 +386,9 @@ contract Minter is
 
   // /* ============ Internal Functions ============ */
 
-  function _authorizeUpgrade(
-    address newImplementation
-  ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+  function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
-  function _smartMint(
-    uint256 _amountIn,
-    uint256 _mintRatio,
-    uint256 _minOut
-  ) private returns (uint256) {
+  function _smartMint(uint256 _amountIn, uint256 _mintRatio, uint256 _minOut) private returns (uint256) {
     require(_amountIn > 0, "Invalid amount");
     require(_mintRatio <= DENOMINATOR, "Incorrect Ratio");
 

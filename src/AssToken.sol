@@ -7,12 +7,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "./interfaces/IAssToken.sol";
 
-contract AssToken is
-  IAssToken,
-  ERC20PermitUpgradeable,
-  OwnableUpgradeable,
-  UUPSUpgradeable
-{
+contract AssToken is IAssToken, ERC20PermitUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
   /* ============ State Variables ============ */
   address public minter;
 
@@ -60,10 +55,7 @@ contract AssToken is
    * @param _account - Address of the account
    * @param _amount - Amount of tokens to mint
    */
-  function mint(
-    address _account,
-    uint256 _amount
-  ) external override onlyMinter {
+  function mint(address _account, uint256 _amount) external override onlyMinter {
     _mint(_account, _amount);
   }
 
@@ -80,7 +72,5 @@ contract AssToken is
   }
 
   /* ============ Internal Functions ============ */
-  function _authorizeUpgrade(
-    address newImplementation
-  ) internal override onlyOwner {}
+  function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }

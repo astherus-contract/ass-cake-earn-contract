@@ -57,16 +57,10 @@ contract RewardDistributionSchedulerTest is Test {
     assToken = AssToken(assTokenProxy);
     console.log("AssToken proxy address: %s", assTokenProxy);
     // deploy mock pancake swap contract
-    pancakeSwapPool = new MockPancakeStableSwapPool(
-      address(token),
-      assTokenProxy,
-      1e5
-    );
+    pancakeSwapPool = new MockPancakeStableSwapPool(address(token), assTokenProxy, 1e5);
     console.log("pancakeSwapPool address: %s", address(pancakeSwapPool));
     // deploy mock pancake swap router
-    pancakeSwapRouter = new MockPancakeStableSwapRouter(
-      address(pancakeSwapPool)
-    );
+    pancakeSwapRouter = new MockPancakeStableSwapRouter(address(pancakeSwapPool));
     console.log("pancakeSwapRouter address: %s", address(pancakeSwapRouter));
     // transfer cake to swap contract
     token.transfer(address(pancakeSwapPool), 1000 ether);
@@ -146,26 +140,15 @@ contract RewardDistributionSchedulerTest is Test {
     // deploy rewardDistributionScheduler with user1
     address rewardDistributionSchedulerProxy = Upgrades.deployUUPSProxy(
       "RewardDistributionScheduler.sol",
-      abi.encodeCall(
-        RewardDistributionScheduler.initialize,
-        (admin, address(token), address(minter), manager)
-      )
+      abi.encodeCall(RewardDistributionScheduler.initialize, (admin, address(token), address(minter), manager))
     );
-    rewardDistributionScheduler = RewardDistributionScheduler(
-      rewardDistributionSchedulerProxy
-    );
-    console.log(
-      "rewardDistributionScheduler proxy address: %s",
-      rewardDistributionSchedulerProxy
-    );
+    rewardDistributionScheduler = RewardDistributionScheduler(rewardDistributionSchedulerProxy);
+    console.log("rewardDistributionScheduler proxy address: %s", rewardDistributionSchedulerProxy);
     vm.stopPrank();
 
     //grant access
     vm.startPrank(admin);
-    rewardDistributionScheduler.grantRole(
-      rewardDistributionScheduler.BOT(),
-      bot
-    );
+    rewardDistributionScheduler.grantRole(rewardDistributionScheduler.BOT(), bot);
     // set compounder role for compounder
     minter.grantRole(minter.COMPOUNDER(), rewardDistributionSchedulerProxy);
     vm.stopPrank();
@@ -179,12 +162,7 @@ contract RewardDistributionSchedulerTest is Test {
   function testAddRewardsScheduleFail() public {
     //user no access
     vm.expectRevert();
-    rewardDistributionScheduler.addRewardsSchedule(
-      IMinter.RewardsType.VeTokenRewards,
-      1 ether,
-      7,
-      block.timestamp
-    );
+    rewardDistributionScheduler.addRewardsSchedule(IMinter.RewardsType.VeTokenRewards, 1 ether, 7, block.timestamp);
 
     //contract pause
     vm.startPrank(admin);
@@ -196,12 +174,7 @@ contract RewardDistributionSchedulerTest is Test {
 
     vm.startPrank(manager);
     vm.expectRevert();
-    rewardDistributionScheduler.addRewardsSchedule(
-      IMinter.RewardsType.VeTokenRewards,
-      1 ether,
-      7,
-      block.timestamp
-    );
+    rewardDistributionScheduler.addRewardsSchedule(IMinter.RewardsType.VeTokenRewards, 1 ether, 7, block.timestamp);
     vm.stopPrank();
 
     //contract not pause
@@ -215,34 +188,19 @@ contract RewardDistributionSchedulerTest is Test {
     // Invalid amount
     vm.startPrank(manager);
     vm.expectRevert("Invalid amount");
-    rewardDistributionScheduler.addRewardsSchedule(
-      IMinter.RewardsType.VeTokenRewards,
-      0,
-      7,
-      block.timestamp
-    );
+    rewardDistributionScheduler.addRewardsSchedule(IMinter.RewardsType.VeTokenRewards, 0, 7, block.timestamp);
     vm.stopPrank();
 
     //Invalid epochs
     vm.startPrank(manager);
     vm.expectRevert("Invalid epochs");
-    rewardDistributionScheduler.addRewardsSchedule(
-      IMinter.RewardsType.VeTokenRewards,
-      1 ether,
-      0,
-      block.timestamp
-    );
+    rewardDistributionScheduler.addRewardsSchedule(IMinter.RewardsType.VeTokenRewards, 1 ether, 0, block.timestamp);
     vm.stopPrank();
 
     //Invalid startTime
     vm.startPrank(manager);
     vm.expectRevert("Invalid startTime");
-    rewardDistributionScheduler.addRewardsSchedule(
-      IMinter.RewardsType.VeTokenRewards,
-      1 ether,
-      7,
-      0
-    );
+    rewardDistributionScheduler.addRewardsSchedule(IMinter.RewardsType.VeTokenRewards, 1 ether, 7, 0);
     vm.stopPrank();
   }
 
@@ -251,20 +209,8 @@ contract RewardDistributionSchedulerTest is Test {
    */
   function testAddRewardsScheduleSuccess() public {
     uint256 startTime = block.timestamp - 2 days;
-    addRewardsScheduleSuccess(
-      IMinter.RewardsType.VeTokenRewards,
-      7 ether,
-      7,
-      startTime,
-      1
-    );
-    addRewardsScheduleSuccess(
-      IMinter.RewardsType.VeTokenRewards,
-      7 ether,
-      7,
-      startTime,
-      2
-    );
+    addRewardsScheduleSuccess(IMinter.RewardsType.VeTokenRewards, 7 ether, 7, startTime, 1);
+    addRewardsScheduleSuccess(IMinter.RewardsType.VeTokenRewards, 7 ether, 7, startTime, 2);
   }
 
   /**
@@ -280,47 +226,28 @@ contract RewardDistributionSchedulerTest is Test {
     vm.startPrank(manager);
 
     uint256 beforeManagerBalance = IERC20(token).balanceOf(manager);
-    uint256 beforeRewardDistributionSchedulerBalance = IERC20(token).balanceOf(
-      address(rewardDistributionScheduler)
-    );
-    uint256 beforeLastDistributeRewardsTimestamp = rewardDistributionScheduler
-      .lastDistributeRewardsTimestamp();
+    uint256 beforeRewardDistributionSchedulerBalance = IERC20(token).balanceOf(address(rewardDistributionScheduler));
+    uint256 beforeLastDistributeRewardsTimestamp = rewardDistributionScheduler.lastDistributeRewardsTimestamp();
 
     token.approve(address(rewardDistributionScheduler), amount);
-    rewardDistributionScheduler.addRewardsSchedule(
-      rewardsType,
-      amount,
-      epochs,
-      startTime
-    );
+    rewardDistributionScheduler.addRewardsSchedule(rewardsType, amount, epochs, startTime);
 
     startTime = (startTime / 1 days) * 1 days;
 
     uint256 afterManagerBalance = IERC20(token).balanceOf(manager);
-    uint256 afterRewardDistributionSchedulerBalance = IERC20(token).balanceOf(
-      address(rewardDistributionScheduler)
-    );
+    uint256 afterRewardDistributionSchedulerBalance = IERC20(token).balanceOf(address(rewardDistributionScheduler));
 
     assertEq(beforeManagerBalance - afterManagerBalance, amount);
+    assertEq(afterRewardDistributionSchedulerBalance - beforeRewardDistributionSchedulerBalance, amount);
     assertEq(
-      afterRewardDistributionSchedulerBalance -
-        beforeRewardDistributionSchedulerBalance,
-      amount
-    );
-    assertEq(
-      startTime < beforeLastDistributeRewardsTimestamp
-        ? startTime
-        : beforeLastDistributeRewardsTimestamp,
+      startTime < beforeLastDistributeRewardsTimestamp ? startTime : beforeLastDistributeRewardsTimestamp,
       rewardDistributionScheduler.lastDistributeRewardsTimestamp()
     );
 
     uint256 amountPerDay = amount / epochs;
     for (uint256 i; i < epochs; i++) {
       console.log("startTime:%s", startTime + i * 1 days);
-      assertEq(
-        rewardDistributionScheduler.epochs(startTime + i * 1 days, rewardsType),
-        amountPerDay * index
-      );
+      assertEq(rewardDistributionScheduler.epochs(startTime + i * 1 days, rewardsType), amountPerDay * index);
     }
 
     vm.stopPrank();
@@ -354,88 +281,32 @@ contract RewardDistributionSchedulerTest is Test {
   function testExecuteRewardSchedulesSuccess() public {
     uint256 startTime = block.timestamp - 2 days;
     //prepare rewards
-    addRewardsScheduleSuccess(
-      IMinter.RewardsType.VoteRewards,
-      7 ether,
-      7,
-      startTime,
-      1
-    );
-    addRewardsScheduleSuccess(
-      IMinter.RewardsType.VoteRewards,
-      7 ether,
-      7,
-      startTime,
-      2
-    );
+    addRewardsScheduleSuccess(IMinter.RewardsType.VoteRewards, 7 ether, 7, startTime, 1);
+    addRewardsScheduleSuccess(IMinter.RewardsType.VoteRewards, 7 ether, 7, startTime, 2);
 
     //start
     vm.startPrank(bot);
     startTime = (startTime / 1 days) * 1 days;
-    uint256 amount = rewardDistributionScheduler.epochs(
-      startTime,
-      IMinter.RewardsType.VoteRewards
-    );
-    uint256 beforeRewardDistributionSchedulerBalance = IERC20(token).balanceOf(
-      address(rewardDistributionScheduler)
-    );
+    uint256 amount = rewardDistributionScheduler.epochs(startTime, IMinter.RewardsType.VoteRewards);
+    uint256 beforeRewardDistributionSchedulerBalance = IERC20(token).balanceOf(address(rewardDistributionScheduler));
 
     rewardDistributionScheduler.executeRewardSchedules();
 
-    uint256 afterRewardDistributionSchedulerBalance = IERC20(token).balanceOf(
-      address(rewardDistributionScheduler)
-    );
+    uint256 afterRewardDistributionSchedulerBalance = IERC20(token).balanceOf(address(rewardDistributionScheduler));
 
-    assertEq(
-      beforeRewardDistributionSchedulerBalance -
-        afterRewardDistributionSchedulerBalance,
-      amount * 3
-    );
+    assertEq(beforeRewardDistributionSchedulerBalance - afterRewardDistributionSchedulerBalance, amount * 3);
 
     startTime = (block.timestamp / 1 days) * 1 days;
-    assertEq(
-      rewardDistributionScheduler.lastDistributeRewardsTimestamp(),
-      startTime + 1 days
-    );
+    assertEq(rewardDistributionScheduler.lastDistributeRewardsTimestamp(), startTime + 1 days);
 
-    assertEq(
-      rewardDistributionScheduler.epochs(
-        startTime + 1 days,
-        IMinter.RewardsType.VoteRewards
-      ),
-      amount
-    );
-    assertEq(
-      rewardDistributionScheduler.epochs(
-        startTime,
-        IMinter.RewardsType.VoteRewards
-      ),
-      0
-    );
+    assertEq(rewardDistributionScheduler.epochs(startTime + 1 days, IMinter.RewardsType.VoteRewards), amount);
+    assertEq(rewardDistributionScheduler.epochs(startTime, IMinter.RewardsType.VoteRewards), 0);
 
-    assertEq(
-      rewardDistributionScheduler.epochs(
-        startTime - 1 days,
-        IMinter.RewardsType.VoteRewards
-      ),
-      0
-    );
+    assertEq(rewardDistributionScheduler.epochs(startTime - 1 days, IMinter.RewardsType.VoteRewards), 0);
 
-    assertEq(
-      rewardDistributionScheduler.epochs(
-        startTime - 2 days,
-        IMinter.RewardsType.VoteRewards
-      ),
-      0
-    );
+    assertEq(rewardDistributionScheduler.epochs(startTime - 2 days, IMinter.RewardsType.VoteRewards), 0);
 
-    assertEq(
-      rewardDistributionScheduler.epochs(
-        startTime - 3 days,
-        IMinter.RewardsType.VoteRewards
-      ),
-      0
-    );
+    assertEq(rewardDistributionScheduler.epochs(startTime - 3 days, IMinter.RewardsType.VoteRewards), 0);
 
     vm.stopPrank();
   }
@@ -472,10 +343,7 @@ contract RewardDistributionSchedulerTest is Test {
 
     //grant access
     vm.startPrank(admin);
-    rewardDistributionScheduler.grantRole(
-      rewardDistributionScheduler.DEFAULT_ADMIN_ROLE(),
-      pauser
-    );
+    rewardDistributionScheduler.grantRole(rewardDistributionScheduler.DEFAULT_ADMIN_ROLE(), pauser);
     vm.stopPrank();
 
     //togglePause success
@@ -494,21 +362,11 @@ contract RewardDistributionSchedulerTest is Test {
 
     //no access
     vm.expectRevert();
-    Upgrades.upgradeProxy(
-      proxyAddress,
-      "RewardDistributionScheduler.sol",
-      "",
-      msg.sender
-    );
+    Upgrades.upgradeProxy(proxyAddress, "RewardDistributionScheduler.sol", "", msg.sender);
 
     //upgradeProxy success
     vm.startPrank(admin);
-    Upgrades.upgradeProxy(
-      proxyAddress,
-      "RewardDistributionScheduler.sol",
-      "",
-      msg.sender
-    );
+    Upgrades.upgradeProxy(proxyAddress, "RewardDistributionScheduler.sol", "", msg.sender);
     address implAddressV2 = Upgrades.getImplementationAddress(proxyAddress);
     assertFalse(implAddressV2 == implAddressV1);
     vm.stopPrank();

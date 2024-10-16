@@ -40,13 +40,7 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
       "Buyback.sol",
       abi.encodeCall(
         Buyback.initialize,
-        (
-          admin,
-          manager,
-          address(swapDstToken),
-          address(receiver),
-          address(oneInchRouter)
-        )
+        (admin, manager, address(swapDstToken), address(receiver), address(oneInchRouter))
       )
     );
     buyback = Buyback(buybackProxy);
@@ -111,9 +105,7 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
     vm.startPrank(bot);
     uint256 beforeTotalBought = buyback.totalBought();
     uint256 beforeReceiverBalance = IERC20(swapDstToken).balanceOf(receiver);
-    uint256 beforeBuybackBalance = IERC20(swapSrcToken).balanceOf(
-      address(buyback)
-    );
+    uint256 beforeBuybackBalance = IERC20(swapSrcToken).balanceOf(address(buyback));
     uint256 today = (block.timestamp / 1 days) * 1 days;
     uint256 beforeDailyBought = buyback.dailyBought(today);
 
@@ -126,9 +118,7 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
 
     uint256 afterTotalBought = buyback.totalBought();
     uint256 afterReceiverBalance = IERC20(swapDstToken).balanceOf(receiver);
-    uint256 afterBuybackBalance = IERC20(swapSrcToken).balanceOf(
-      address(buyback)
-    );
+    uint256 afterBuybackBalance = IERC20(swapSrcToken).balanceOf(address(buyback));
     uint256 afterDailyBought = buyback.dailyBought(today);
 
     uint256 diffTotalBought = afterTotalBought - beforeTotalBought;
@@ -332,11 +322,7 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
     console.log("implAddressV2: %s", implAddressV2);
   }
 
-  function sliceBytes(
-    bytes memory data,
-    uint start,
-    uint length
-  ) public pure returns (bytes memory) {
+  function sliceBytes(bytes memory data, uint start, uint length) public pure returns (bytes memory) {
     require(data.length >= start + length, "Out of bounds");
     bytes memory result = new bytes(length);
     for (uint i = 0; i < length; i++) {
