@@ -32,7 +32,7 @@ contract UniversalProxyScript is Script {
 
     // --- contract addresses
     // token
-    address token = vm.envAddress("UP_TOKEN");
+    address token = vm.envAddress("TOKEN");
     require(token != address(0), "Token address cannot be null");
     console.log("Token: %s", token);
 
@@ -52,7 +52,7 @@ contract UniversalProxyScript is Script {
     console.log("ifo: %s", ifo);
 
     // rewardDistributionScheduler
-    address rewardDistributionScheduler = vm.envAddress("UP_REWARD_DISTRIBUTION_SCHEDULER");
+    address rewardDistributionScheduler = vm.envAddress("REWARD_DISTRIBUTION_SCHEDULER");
     require(rewardDistributionScheduler != address(0), "rewardDistributionScheduler address cannot be null");
     console.log("rewardDistributionScheduler: %s", rewardDistributionScheduler);
 

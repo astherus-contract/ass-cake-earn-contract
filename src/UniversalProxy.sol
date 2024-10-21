@@ -335,6 +335,19 @@ contract UniversalProxy is
   }
 
   /**
+   * @dev set rewardDistributionScheduler
+   * @param _rewardDistributionScheduler - address of the rewardDistributionScheduler
+   */
+  function setRewardDistributionScheduler(address _rewardDistributionScheduler) external onlyRole(MANAGER) {
+    require(_rewardDistributionScheduler != address(0), "Invalid rewardDistributionScheduler address");
+    require(
+      _rewardDistributionScheduler != address(rewardsDistributionScheduler),
+      "rewardDistributionScheduler can't be the same address"
+    );
+    rewardsDistributionScheduler = IRewardDistributionScheduler(_rewardDistributionScheduler);
+  }
+
+  /**
    * @dev Flips the pause state
    */
   function togglePause() external onlyRole(DEFAULT_ADMIN_ROLE) {
