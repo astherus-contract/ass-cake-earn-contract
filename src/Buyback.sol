@@ -28,6 +28,9 @@ contract Buyback is
 
   uint256 internal constant DAY = 1 days;
 
+  bytes4 public constant SWAP_SELECTOR =
+    bytes4(keccak256("swap(address,(address,address,address,address,uint256,uint256,uint256),bytes)"));
+
   /* ============ State Variables ============ */
   // buyback receiver address
   address public receiver;
@@ -98,6 +101,8 @@ contract Buyback is
     require(oneInchRouterWhitelist[_1inchRouter], "1inchRouter not whitelisted");
 
     // Get data (swapData) from https://api.1inch.dev/swap/v6.0/56/swap without making any changes and pass it to the contract method
+    require(bytes4(swapData[0:4]) == SWAP_SELECTOR, "invalid 1Inch function selector");
+
     (, SwapDescription memory swapDesc, ) = abi.decode(swapData[4:], (address, SwapDescription, bytes));
 
     require(swapSrcTokenWhitelist[address(swapDesc.srcToken)], "srcToken not whitelisted");
