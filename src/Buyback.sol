@@ -202,10 +202,10 @@ contract Buyback is
   }
 
   /**
-   * @dev Flips the pause state
+   * @dev unpause the contract
    */
-  function togglePause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-    paused() ? _unpause() : _pause();
+  function unpause() external onlyRole(MANAGER) {
+    _unpause();
   }
 
   /**
