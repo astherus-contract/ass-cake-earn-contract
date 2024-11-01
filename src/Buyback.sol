@@ -31,7 +31,7 @@ contract Buyback is
   bytes4 public constant SWAP_SELECTOR =
     bytes4(keccak256("swap(address,(address,address,address,address,uint256,uint256,uint256),bytes)"));
 
-  address public constant swapNativeAddress = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+  address public constant SWAP_NATIVE_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
   /* ============ State Variables ============ */
   // buyback receiver address
@@ -112,7 +112,7 @@ contract Buyback is
     require(swapDesc.dstReceiver == receiver, "invalid dstReceiver");
     require(swapDesc.amount > 0, "invalid amount");
 
-    bool isNativeSrcToken = address(swapDesc.srcToken) == swapNativeAddress ? true : false;
+    bool isNativeSrcToken = address(swapDesc.srcToken) == SWAP_NATIVE_ADDRESS ? true : false;
     uint256 srcTokenBalance = isNativeSrcToken ? address(this).balance : swapDesc.srcToken.balanceOf(address(this));
     require(srcTokenBalance >= swapDesc.amount, "insufficient balance");
 
