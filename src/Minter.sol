@@ -76,6 +76,7 @@ contract Minter is
   event PancakeSwapRouterChanged(address indexed sender, address indexed pancakeSwapRouter);
   event PancakeSwapPoolChanged(address indexed sender, address indexed pancakeSwapPool);
   event MaxSwapRatioChanged(address indexed sender, uint256 maxSwapRatio);
+  event AddToken(address indexed assToken, address indexed token);
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -127,6 +128,8 @@ contract Minter is
     pancakeSwapRouter = _pancakeSwapRouter;
     pancakeSwapPool = _pancakeSwapPool;
     maxSwapRatio = _maxSwapRatio;
+
+    emit AddToken(_assToken, _token);
   }
 
   /* ============ External Getters ============ */
