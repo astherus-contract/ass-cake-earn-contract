@@ -681,13 +681,18 @@ contract MinterTest is Test {
   function testTogglePause() public {
     //user no access
     vm.expectRevert();
-    minter.togglePause();
+    minter.unpause();
 
-    //togglePause success
-    vm.startPrank(admin);
-    bool paused = minter.paused();
-    minter.togglePause();
-    assertEq(minter.paused(), !paused);
+    // pause contract
+    vm.startPrank(pauser);
+    minter.pause();
+    assertEq(minter.paused(), true);
+    vm.stopPrank();
+
+    // unpause contract
+    vm.startPrank(manager);
+    minter.unpause();
+    assertEq(minter.paused(), false);
     vm.stopPrank();
   }
 
@@ -702,7 +707,7 @@ contract MinterTest is Test {
     //pauser no access
     vm.startPrank(pauser);
     vm.expectRevert();
-    minter.togglePause();
+    minter.unpause();
     vm.stopPrank();
 
     //grant access
@@ -712,7 +717,7 @@ contract MinterTest is Test {
 
     //togglePause success
     vm.startPrank(pauser);
-    minter.togglePause();
+    minter.pause();
     assertEq(minter.paused(), true);
     vm.stopPrank();
   }

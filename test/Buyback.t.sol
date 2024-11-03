@@ -79,18 +79,21 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
     vm.expectRevert();
     buyback.buyback(oneInchRouter, "");
 
-    //contract pause
+    //pause contract
     vm.startPrank(admin);
+    buyback.grantRole(buyback.PAUSER(), pauser);
+    vm.stopPrank();
+    vm.startPrank(pauser);
     if (buyback.paused() != true) {
-      buyback.togglePause();
+      buyback.pause();
     }
     assertEq(buyback.paused(), true);
     vm.stopPrank();
 
     //contract not pause
-    vm.startPrank(admin);
+    vm.startPrank(manager);
     if (buyback.paused() == true) {
-      buyback.togglePause();
+      buyback.unpause();
     }
     assertEq(buyback.paused(), false);
     vm.stopPrank();
@@ -108,7 +111,7 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
     //contract no pause
     vm.startPrank(admin);
     if (buyback.paused() == true) {
-      buyback.togglePause();
+      buyback.unpause();
       assertEq(buyback.paused(), false);
     }
     vm.stopPrank();
@@ -152,7 +155,7 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
     //contract no pause
     vm.startPrank(admin);
     if (buyback.paused() == true) {
-      buyback.togglePause();
+      buyback.unpause();
       assertEq(buyback.paused(), false);
     }
     vm.stopPrank();
@@ -315,44 +318,23 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
   }
 
   /**
-   * @dev test Flips the pause state
-   */
-  function testTogglePause() public {
-    //user no access
-    vm.expectRevert();
-    buyback.togglePause();
-
-    //togglePause success
-    vm.startPrank(admin);
-    bool paused = buyback.paused();
-    buyback.togglePause();
-    assertEq(buyback.paused(), !paused);
-    vm.stopPrank();
-  }
-
-  /**
    * @dev test pause the contract
    */
-  function testPause() public {
-    //user no access
-    vm.expectRevert();
-    buyback.pause();
+  function testPauseAndUnpause() public {
+    //grant pauser access
+    vm.startPrank(admin);
+    buyback.grantRole(buyback.PAUSER(), pauser);
+    vm.stopPrank();
 
-    //pauser no access
     vm.startPrank(pauser);
-    vm.expectRevert();
-    buyback.togglePause();
+    buyback.pause();
+    assertEq(buyback.paused(), true);
     vm.stopPrank();
 
     //grant access
-    vm.startPrank(admin);
-    buyback.grantRole(buyback.DEFAULT_ADMIN_ROLE(), pauser);
-    vm.stopPrank();
-
-    //togglePause success
-    vm.startPrank(pauser);
-    buyback.togglePause();
-    assertEq(buyback.paused(), true);
+    vm.startPrank(manager);
+    buyback.unpause();
+    assertEq(buyback.paused(), false);
     vm.stopPrank();
   }
 

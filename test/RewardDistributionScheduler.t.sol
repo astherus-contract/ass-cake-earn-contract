@@ -149,6 +149,8 @@ contract RewardDistributionSchedulerTest is Test {
     //grant access
     vm.startPrank(admin);
     rewardDistributionScheduler.grantRole(rewardDistributionScheduler.BOT(), bot);
+    rewardDistributionScheduler.grantRole(rewardDistributionScheduler.PAUSER(), pauser);
+    rewardDistributionScheduler.grantRole(rewardDistributionScheduler.MANAGER(), manager);
     // set compounder role for compounder
     minter.grantRole(minter.COMPOUNDER(), rewardDistributionSchedulerProxy);
     vm.stopPrank();
@@ -165,9 +167,9 @@ contract RewardDistributionSchedulerTest is Test {
     rewardDistributionScheduler.addRewardsSchedule(IMinter.RewardsType.VeTokenRewards, 1 ether, 7, block.timestamp);
 
     //contract pause
-    vm.startPrank(admin);
+    vm.startPrank(pauser);
     if (rewardDistributionScheduler.paused() != true) {
-      rewardDistributionScheduler.togglePause();
+      rewardDistributionScheduler.pause();
     }
     assertEq(rewardDistributionScheduler.paused(), true);
     vm.stopPrank();
@@ -177,10 +179,10 @@ contract RewardDistributionSchedulerTest is Test {
     rewardDistributionScheduler.addRewardsSchedule(IMinter.RewardsType.VeTokenRewards, 1 ether, 7, block.timestamp);
     vm.stopPrank();
 
-    //contract not pause
-    vm.startPrank(admin);
+    //resume contract
+    vm.startPrank(manager);
     if (rewardDistributionScheduler.paused() == true) {
-      rewardDistributionScheduler.togglePause();
+      rewardDistributionScheduler.unpause();
     }
     assertEq(rewardDistributionScheduler.paused(), false);
     vm.stopPrank();
@@ -262,9 +264,9 @@ contract RewardDistributionSchedulerTest is Test {
     rewardDistributionScheduler.executeRewardSchedules();
 
     //contract pause
-    vm.startPrank(admin);
+    vm.startPrank(pauser);
     if (rewardDistributionScheduler.paused() != true) {
-      rewardDistributionScheduler.togglePause();
+      rewardDistributionScheduler.pause();
     }
     assertEq(rewardDistributionScheduler.paused(), true);
     vm.stopPrank();
@@ -314,42 +316,21 @@ contract RewardDistributionSchedulerTest is Test {
   /**
    * @dev test Flips the pause state
    */
-  function testTogglePause() public {
+  function testPauseAndUnpause() public {
     //user no access
     vm.expectRevert();
-    rewardDistributionScheduler.togglePause();
+    rewardDistributionScheduler.unpause();
 
-    //togglePause success
-    vm.startPrank(admin);
-    bool paused = rewardDistributionScheduler.paused();
-    rewardDistributionScheduler.togglePause();
-    assertEq(rewardDistributionScheduler.paused(), !paused);
-    vm.stopPrank();
-  }
-
-  /**
-   * @dev test pause the contract
-   */
-  function testPause() public {
-    //user no access
-    vm.expectRevert();
+    // pause contract
+    vm.startPrank(pauser);
     rewardDistributionScheduler.pause();
-
-    //pauser no access
-    vm.startPrank(pauser);
-    vm.expectRevert();
-    rewardDistributionScheduler.togglePause();
-    vm.stopPrank();
-
-    //grant access
-    vm.startPrank(admin);
-    rewardDistributionScheduler.grantRole(rewardDistributionScheduler.DEFAULT_ADMIN_ROLE(), pauser);
-    vm.stopPrank();
-
-    //togglePause success
-    vm.startPrank(pauser);
-    rewardDistributionScheduler.togglePause();
     assertEq(rewardDistributionScheduler.paused(), true);
+    vm.stopPrank();
+
+    // unpause contract
+    vm.startPrank(manager);
+    rewardDistributionScheduler.unpause();
+    assertEq(rewardDistributionScheduler.paused(), false);
     vm.stopPrank();
   }
 
