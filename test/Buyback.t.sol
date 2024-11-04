@@ -46,7 +46,7 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
       "Buyback.sol",
       abi.encodeCall(
         Buyback.initialize,
-        (admin, manager, address(swapDstToken), address(receiver), address(oneInchRouter))
+        (admin, manager, pauser, address(swapDstToken), address(receiver), address(oneInchRouter))
       )
     );
     buyback = Buyback(buybackProxy);

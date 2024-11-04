@@ -19,6 +19,7 @@ interface IBuyback {
   function initialize(
     address _admin,
     address _manager,
+    address _pauser,
     address _token,
     address _receiver,
     address _oneInchRouter

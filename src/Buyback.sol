@@ -69,12 +69,14 @@ contract Buyback is
   function initialize(
     address _admin,
     address _manager,
+    address _pauser,
     address _swapDstToken,
     address _receiver,
     address _oneInchRouter
   ) external override initializer {
     require(_admin != address(0), "Invalid admin address");
     require(_manager != address(0), "Invalid _manager address");
+    require(_pauser != address(0), "Invalid _pauser address");
     require(_swapDstToken != address(0), "Invalid swapDstToken address");
     require(_receiver != address(0), "Invalid receiver address");
     require(_oneInchRouter != address(0), "Invalid oneInchRouter address");
@@ -83,6 +85,7 @@ contract Buyback is
     __ReentrancyGuard_init();
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(MANAGER, _manager);
+    _grantRole(PAUSER, _pauser);
 
     swapDstToken = _swapDstToken;
     receiver = _receiver;
