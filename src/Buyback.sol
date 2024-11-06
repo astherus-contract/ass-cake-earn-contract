@@ -52,10 +52,17 @@ contract Buyback is
   event ReceiverChanged(address indexed receiver);
   event OneInchRouterChanged(address indexed oneInchRouter, bool added);
   event SwapSrcTokenChanged(address indexed srcToken, bool added);
+  event ReceiveBNB(address indexed from, address indexed to, uint256 amount);
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
+  }
+
+  receive() external payable {
+    if (msg.value > 0) {
+      emit ReceiveBNB(msg.sender, address(this), msg.value);
+    }
   }
 
   /**
