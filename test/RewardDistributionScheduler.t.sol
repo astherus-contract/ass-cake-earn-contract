@@ -140,7 +140,7 @@ contract RewardDistributionSchedulerTest is Test {
     // deploy rewardDistributionScheduler with user1
     address rewardDistributionSchedulerProxy = Upgrades.deployUUPSProxy(
       "RewardDistributionScheduler.sol",
-      abi.encodeCall(RewardDistributionScheduler.initialize, (admin, address(token), address(minter), manager))
+      abi.encodeCall(RewardDistributionScheduler.initialize, (admin, address(token), address(minter), manager, pauser))
     );
     rewardDistributionScheduler = RewardDistributionScheduler(rewardDistributionSchedulerProxy);
     console.log("rewardDistributionScheduler proxy address: %s", rewardDistributionSchedulerProxy);

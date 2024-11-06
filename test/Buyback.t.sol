@@ -7,8 +7,10 @@ import { Buyback } from "../src/Buyback.sol";
 import { MockERC20 } from "../src/mock/MockERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../src/interfaces/IBuyback.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 contract BuybackTest is Test {
+  using Address for address payable;
   Buyback public buyback;
   address public manager = makeAddr("MANAGER");
   address public admin = makeAddr("ADMIN");
@@ -46,10 +48,10 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
       "Buyback.sol",
       abi.encodeCall(
         Buyback.initialize,
-        (admin, manager, address(swapDstToken), address(receiver), address(oneInchRouter))
+        (admin, manager, pauser, address(swapDstToken), address(receiver), address(oneInchRouter))
       )
     );
-    buyback = Buyback(buybackProxy);
+    buyback = Buyback(payable(buybackProxy));
     console.log("buyback proxy address: %s", buybackProxy);
     vm.stopPrank();
 
@@ -335,6 +337,22 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
     vm.startPrank(manager);
     buyback.unpause();
     assertEq(buyback.paused(), false);
+    vm.stopPrank();
+  }
+
+  function testReceiveBNB() public {
+    address userBNB = makeAddr("userBNB");
+    deal(userBNB, 1 ether);
+
+    vm.startPrank(userBNB);
+    uint256 balanceBefore = address(buyback).balance;
+    console.log("balanceBefore=%s", balanceBefore);
+
+    payable(buyback).sendValue(1 ether);
+    console.log("balanceAfter=%s", address(buyback).balance);
+    assertEq(address(buyback).balance, balanceBefore + 1 ether);
+    assertEq(userBNB.balance, 0 ether);
+
     vm.stopPrank();
   }
 

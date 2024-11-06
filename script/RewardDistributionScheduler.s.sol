@@ -18,6 +18,8 @@ contract RewardDistributionSchedulerScript is Script {
     console.log("Manager: %s", manager);
     address minter = vm.envOr("MINTER", admin);
     console.log("Minter: %s", minter);
+    address pauser = vm.envOr("PAUSER", admin);
+    console.log("Pauser: %s", pauser);
 
     // token
     address token = vm.envAddress("TOKEN");
@@ -27,7 +29,7 @@ contract RewardDistributionSchedulerScript is Script {
     vm.startBroadcast(deployerPrivateKey);
     address proxy = Upgrades.deployUUPSProxy(
       "RewardDistributionScheduler.sol",
-      abi.encodeCall(RewardDistributionScheduler.initialize, (admin, token, minter, manager))
+      abi.encodeCall(RewardDistributionScheduler.initialize, (admin, token, minter, manager, pauser))
     );
     vm.stopBroadcast();
     console.log("RewardDistributionScheduler proxy address: %s", proxy);

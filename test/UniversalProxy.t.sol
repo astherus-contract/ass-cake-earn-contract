@@ -74,7 +74,7 @@ contract UniversalProxyTest is Test {
     // deploy rewardDistributionScheduler proxy
     address rdsProxy = Upgrades.deployUUPSProxy(
       "RewardDistributionScheduler.sol",
-      abi.encodeCall(RewardDistributionScheduler.initialize, (admin, address(token), minter, manager))
+      abi.encodeCall(RewardDistributionScheduler.initialize, (admin, address(token), minter, manager, pauser))
     );
     rewardDistributionScheduler = RewardDistributionScheduler(address(rdsProxy));
     console.log("RewardDistributionScheduler address: %s", address(rdsProxy));

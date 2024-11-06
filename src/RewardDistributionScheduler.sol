@@ -56,15 +56,24 @@ contract RewardDistributionScheduler is
    * @param _minter - Address of the minter
    * @param _manager - Address of the manager
    */
-  function initialize(address _admin, address _token, address _minter, address _manager) external override initializer {
+  function initialize(
+    address _admin,
+    address _token,
+    address _minter,
+    address _manager,
+    address _pauser
+  ) external override initializer {
     require(_admin != address(0), "Invalid admin address");
     require(_token != address(0), "Invalid token address");
     require(_minter != address(0), "Invalid minter address");
+    require(_manager != address(0), "Invalid manager address");
+    require(_pauser != address(0), "Invalid pauser address");
 
     __Pausable_init();
     __ReentrancyGuard_init();
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(MANAGER, _manager);
+    _grantRole(PAUSER, _pauser);
 
     token = IERC20(_token);
     minter = _minter;
