@@ -22,13 +22,16 @@ interface IBuyback {
     address _pauser,
     address _token,
     address _receiver,
-    address _oneInchRouter
+    address _oneInchRouter,
+    address _swapNativeAddress
   ) external;
 
 
   function buyback(address _1inchRouter, bytes calldata swapData) external;
 
   function changeReceiver(address _receiver) external;
+
+  function changeSwapNativeAddress(address _swapNativeAddress) external;
 
   function add1InchRouterWhitelist(address oneInchRouter) external;
 
