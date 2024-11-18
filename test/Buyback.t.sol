@@ -48,7 +48,7 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
       "Buyback.sol",
       abi.encodeCall(
         Buyback.initialize,
-        (admin, manager, pauser, address(swapDstToken), address(receiver), address(oneInchRouter))
+        (admin, manager, pauser, address(swapDstToken), address(receiver), address(oneInchRouter), swapNativeSrcToken)
       )
     );
     buyback = Buyback(payable(buybackProxy));
@@ -220,6 +220,35 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
     assertEq(buyback.receiver(), swapReceiver);
     vm.expectRevert("_receiver is the same");
     buyback.changeReceiver(swapReceiver);
+    vm.stopPrank();
+  }
+
+  /**
+   * @dev test changeSwapNativeAddress
+   */
+  function testChangeSwapNativeAddress() public {
+    address swapNativeAddress = makeAddr("swapNativeAddress");
+    //user no access
+    vm.expectRevert();
+    buyback.changeSwapNativeAddress(swapNativeAddress);
+
+    //zero address
+    vm.startPrank(manager);
+    vm.expectRevert("_swapNativeAddress is the zero address");
+    buyback.changeSwapNativeAddress(address(0));
+    vm.stopPrank();
+
+    //change success
+    vm.startPrank(manager);
+    buyback.changeSwapNativeAddress(swapNativeAddress);
+    assertEq(buyback.swapNativeAddress(), swapNativeAddress);
+    vm.stopPrank();
+
+    //duplicate change
+    vm.startPrank(manager);
+    assertEq(buyback.swapNativeAddress(), swapNativeAddress);
+    vm.expectRevert("_swapNativeAddress is the same");
+    buyback.changeSwapNativeAddress(swapNativeAddress);
     vm.stopPrank();
   }
 

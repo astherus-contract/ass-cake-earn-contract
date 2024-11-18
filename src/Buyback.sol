@@ -31,8 +31,6 @@ contract Buyback is
   bytes4 public constant SWAP_SELECTOR =
     bytes4(keccak256("swap(address,(address,address,address,address,uint256,uint256,uint256),bytes)"));
 
-  address public constant SWAP_NATIVE_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-
   /* ============ State Variables ============ */
   // buyback receiver address
   address public receiver;
@@ -47,9 +45,13 @@ contract Buyback is
   // total bought
   uint256 public totalBought;
 
+  //swap native address
+  address public swapNativeAddress;
+
   /* ============ Events ============ */
   event BoughtBack(address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut);
   event ReceiverChanged(address indexed receiver);
+  event swapNativeAddressChanged(address indexed swapNativeAddress);
   event OneInchRouterChanged(address indexed oneInchRouter, bool added);
   event SwapSrcTokenChanged(address indexed srcToken, bool added);
   event ReceiveBNB(address indexed from, address indexed to, uint256 amount);
@@ -79,7 +81,8 @@ contract Buyback is
     address _pauser,
     address _swapDstToken,
     address _receiver,
-    address _oneInchRouter
+    address _oneInchRouter,
+    address _swapNativeAddress
   ) external override initializer {
     require(_admin != address(0), "Invalid admin address");
     require(_manager != address(0), "Invalid _manager address");
@@ -87,6 +90,7 @@ contract Buyback is
     require(_swapDstToken != address(0), "Invalid swapDstToken address");
     require(_receiver != address(0), "Invalid receiver address");
     require(_oneInchRouter != address(0), "Invalid oneInchRouter address");
+    require(_swapNativeAddress != address(0), "Invalid swapNativeAddress address");
 
     __Pausable_init();
     __ReentrancyGuard_init();
@@ -96,6 +100,7 @@ contract Buyback is
 
     swapDstToken = _swapDstToken;
     receiver = _receiver;
+    swapNativeAddress = _swapNativeAddress;
     oneInchRouterWhitelist[_oneInchRouter] = true;
   }
 
@@ -122,7 +127,7 @@ contract Buyback is
     require(swapDesc.dstReceiver == receiver, "invalid dstReceiver");
     require(swapDesc.amount > 0, "invalid amount");
 
-    bool isNativeSrcToken = address(swapDesc.srcToken) == SWAP_NATIVE_ADDRESS ? true : false;
+    bool isNativeSrcToken = address(swapDesc.srcToken) == swapNativeAddress ? true : false;
     uint256 srcTokenBalance = isNativeSrcToken ? address(this).balance : swapDesc.srcToken.balanceOf(address(this));
     require(srcTokenBalance >= swapDesc.amount, "insufficient balance");
 
@@ -165,6 +170,18 @@ contract Buyback is
 
     receiver = _receiver;
     emit ReceiverChanged(_receiver);
+  }
+
+  /**
+   * @dev changeSwapNativeAddress
+   * @param _swapNativeAddress - Address of the swap native
+   */
+  function changeSwapNativeAddress(address _swapNativeAddress) external onlyRole(MANAGER) {
+    require(_swapNativeAddress != address(0), "_swapNativeAddress is the zero address");
+    require(swapNativeAddress != _swapNativeAddress, "_swapNativeAddress is the same");
+
+    swapNativeAddress = _swapNativeAddress;
+    emit swapNativeAddressChanged(swapNativeAddress);
   }
 
   /**

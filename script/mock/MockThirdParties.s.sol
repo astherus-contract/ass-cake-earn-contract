@@ -13,6 +13,7 @@ import { MockCakePlatform } from "../../src/mock/stakeDao/MockCakePlatform.sol";
 import { MockVeCake } from "../../src/mock/pancakeswap/MockVeCake.sol";
 import { MockPancakeStableSwapPool } from "../../src/mock/pancakeswap/MockPancakeStableSwapPool.sol";
 import { MockPancakeStableSwapRouter } from "../../src/mock/pancakeswap/MockPancakeStableSwapRouter.sol";
+import "../../src/mock/oneinch/MockAggregationRouterV6.sol";
 
 contract MockThirdPartiesScript is Script {
   function setUp() public {}
@@ -54,6 +55,10 @@ contract MockThirdPartiesScript is Script {
     // deploy pancake stable swap router
     MockPancakeStableSwapRouter pancakeSwapRouter = new MockPancakeStableSwapRouter(address(pancakeSwapPool));
 
+    // deploy one inch router
+    address nativeAddress = vm.envAddress("ONE_INCH_SWAP_NATIVE_TOKEN");
+    MockAggregationRouterV6 oneInchRouter = new MockAggregationRouterV6(nativeAddress);
+
     vm.stopBroadcast();
     console.log("MockERC20: %s", address(token));
     console.log("AssToken: %s", address(assToken));
@@ -66,5 +71,7 @@ contract MockThirdPartiesScript is Script {
     console.log("MockVeCake: %s", address(veCake));
     console.log("MockPancakeStableSwapPool: %s", address(pancakeSwapPool));
     console.log("MockPancakeStableSwapRouter: %s", address(pancakeSwapRouter));
+    console.log("MockAggregationRouterV6: %s", address(oneInchRouter));
+
   }
 }
