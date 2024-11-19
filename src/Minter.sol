@@ -72,7 +72,7 @@ contract Minter is
     uint256 fee
   );
   event FeeRateUpdated(address indexed sender, RewardsType rewardsType, uint256 oldFeeRate, uint256 newFeeRate);
-  event FeeWithdrawn(address indexed sender, address receipt, uint256 amountIn);
+  event FeeWithdrawn(address indexed sender, address receipt, uint256 amount);
   event PancakeSwapRouterChanged(address indexed sender, address indexed pancakeSwapRouter);
   event PancakeSwapPoolChanged(address indexed sender, address indexed pancakeSwapPool);
   event MaxSwapRatioChanged(address indexed sender, uint256 maxSwapRatio);
@@ -338,17 +338,17 @@ contract Minter is
   /**
    * @dev withdrawFee
    * @param receipt - Address of the receipt
-   * @param amountIn - amount of token
+   * @param amount - amount of token
    */
-  function withdrawFee(address receipt, uint256 amountIn) external nonReentrant onlyRole(MANAGER) {
+  function withdrawFee(address receipt, uint256 amount) external nonReentrant onlyRole(MANAGER) {
     require(receipt != address(0), "Invalid address");
-    require(amountIn > 0, "Invalid amount");
-    require(amountIn <= totalFee, "Invalid amount");
+    require(amount > 0, "Invalid amount");
+    require(amount <= totalFee, "Invalid amount");
 
-    totalFee -= amountIn;
-    IERC20(token).safeTransfer(receipt, amountIn);
+    totalFee -= amount;
+    IERC20(token).safeTransfer(receipt, amount);
 
-    emit FeeWithdrawn(msg.sender, receipt, amountIn);
+    emit FeeWithdrawn(msg.sender, receipt, amount);
   }
 
   /**
