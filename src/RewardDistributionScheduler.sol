@@ -71,6 +71,8 @@ contract RewardDistributionScheduler is
 
     __Pausable_init();
     __ReentrancyGuard_init();
+    __AccessControl_init();
+    __UUPSUpgradeable_init();
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(MANAGER, _manager);
     _grantRole(PAUSER, _pauser);
@@ -83,7 +85,7 @@ contract RewardDistributionScheduler is
   // /* ============ External Functions ============ */
 
   /**
-   * @dev addRewardsSchedule
+   * @dev addRewardsSchedule create a rewards plan
    * @param _rewardsType - rewards type
    * @param _amount - rewards amount
    * @param _epochs - rewards epochs eg:7;14
@@ -98,7 +100,7 @@ contract RewardDistributionScheduler is
     require(_amount > 0, "Invalid amount");
     require(_epochs > 0, "Invalid epochs");
     require(_startTime > 0, "Invalid startTime");
-
+    //valid rewardsType
     require(
       IMinter.RewardsType.VeTokenRewards == _rewardsType ||
         IMinter.RewardsType.VoteRewards == _rewardsType ||
@@ -108,15 +110,23 @@ contract RewardDistributionScheduler is
 
     uint256 startTime = (_startTime / 1 days) * 1 days;
 
+    // The rewards have been distributed,
+    // and additional reward plans added later.
+    // if the start time is less than the emitted time. Need to reset the release time
     if (startTime < lastDistributeRewardsTimestamp) {
       lastDistributeRewardsTimestamp = startTime;
     }
 
+    // transfer funds to this contract
     token.safeTransferFrom(msg.sender, address(this), _amount);
+    // average daily reward amount
     uint256 amountPerDay = _amount / _epochs;
+    // spread rewards every day
     for (uint256 i; i < _epochs; i++) {
+      // accumulation of different reward types
       epochs[startTime + i * 1 days][_rewardsType] += amountPerDay;
     }
+    // emit event
     emit RewardsScheduleAdded(msg.sender, _rewardsType, _amount, _epochs, startTime);
   }
 
@@ -124,21 +134,35 @@ contract RewardDistributionScheduler is
    * @dev executeRewardSchedules per day
    */
   function executeRewardSchedules() external override onlyRole(BOT) nonReentrant whenNotPaused {
+    // flooring the current timestamp to 1 day
     uint256 currentTimestamp = (block.timestamp / 1 days) * 1 days;
+    // get num. of reward types
     uint max = (uint)(type(IMinter.RewardsType).max);
+    // rewards type array
+    IMinter.RewardsType[] memory rewardsTypes = new IMinter.RewardsType[](max);
+    // total rewards per type array
+    uint256[] memory totalRewards = new uint256[](max);
 
+    // from the day of last distribution
+    // process the rewards day by day
     while (lastDistributeRewardsTimestamp <= currentTimestamp) {
-      for (uint j; j < max; j++) {
-        if (epochs[lastDistributeRewardsTimestamp][IMinter.RewardsType(j)] != 0) {
-          uint256 amount = epochs[lastDistributeRewardsTimestamp][IMinter.RewardsType(j)];
-          IERC20(token).safeIncreaseAllowance(minter, amount);
-
-          delete epochs[lastDistributeRewardsTimestamp][IMinter.RewardsType(j)];
-          IMinter(minter).compoundRewards(IMinter.RewardsType(j), amount);
+      // sum up rewards for each type
+      for (uint i; i < max; ++i) {
+        rewardsTypes[i] = IMinter.RewardsType(i);
+        // if there are rewards to distribute for that type on that day
+        if (epochs[lastDistributeRewardsTimestamp][rewardsTypes[i]] != 0) {
+          // add up rewards for that type and increase allowance
+          totalRewards[i] += epochs[lastDistributeRewardsTimestamp][rewardsTypes[i]];
+          IERC20(token).safeIncreaseAllowance(minter, epochs[lastDistributeRewardsTimestamp][rewardsTypes[i]]);
+          // remove it from the epoch
+          delete epochs[lastDistributeRewardsTimestamp][IMinter.RewardsType(i)];
         }
       }
+      // process the next day
       lastDistributeRewardsTimestamp += 1 days;
     }
+    // compound all types of rewards at once
+    IMinter(minter).compoundRewards(rewardsTypes, totalRewards);
   }
 
   /**

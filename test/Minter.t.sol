@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
+pragma abicoder v2;
 
 import { Test, console } from "forge-std/Test.sol";
 import { Upgrades } from "openzeppelin-foundry-upgrades/Upgrades.sol";
@@ -14,6 +15,12 @@ import { MockVeCake } from "../src/mock/pancakeswap/MockVeCake.sol";
 import { UniversalProxy } from "../src/UniversalProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+/** cmd:
+ forge clean && \
+ forge build --via-ir && \
+ forge test -vvvv --match-contract MinterTest --via-ir
+*/
 
 contract MinterTest is Test {
   using SafeERC20 for IERC20;
@@ -33,6 +40,12 @@ contract MinterTest is Test {
   address public user1 = address(0xACC1);
   address public user2 = address(0xACC2);
   address public user3 = address(0xACC3);
+
+  // Prepare Fee Ratio
+  // (10_000 = 100%)
+  uint256 public veTokenRewardsFeeRate = 1000;
+  uint256 public voteRewardsFeeRate = 2000;
+  uint256 public donateRewardsFeeRate = 3000;
 
   function setUp() public {
     // fork mainnet
@@ -153,7 +166,7 @@ contract MinterTest is Test {
    */
   function testSmartMintSuccess_swap_assToken_vs_token_lt_1() public {
     smartMintSuccess(10 ether, 1_0000); //assTokenTotalSupply =10，TotalTokens=10
-    compoundVeTokenRewardsSuccess(10 ether); //assTokenTotalSupply =10，TotalTokens=10+9
+    compoundRewardsSuccess(10 ether); //assTokenTotalSupply =10，TotalTokens=10+9
     //(tokens * (assTokenTotalSupply+1)) / (totalTokens+1);
     uint256 convertToAssTokens = minter.convertToAssTokens(1 ether);
     assertNotEq(convertToAssTokens, 1 ether);
@@ -174,7 +187,7 @@ contract MinterTest is Test {
    */
   function testSmartMintSuccess_swap_assToken_vs_token_gt_1() public {
     smartMintSuccess(10 ether, 1_0000); //assTokenTotalSupply =10，TotalTokens=10
-    compoundVeTokenRewardsSuccess(10 ether); //assTokenTotalSupply =10，TotalTokens=10+9
+    compoundRewardsSuccess(10 ether); //assTokenTotalSupply =10，TotalTokens=10+9
     //(tokens * (assTokenTotalSupply+1)) / (totalTokens+1);
     uint256 convertToAssTokens = minter.convertToAssTokens(1 ether);
     assertNotEq(convertToAssTokens, 1 ether);
@@ -202,37 +215,26 @@ contract MinterTest is Test {
     console.log("swapToAssTokens:%s", convertToAssTokens);
 
     vm.startPrank(user1);
-    //    uint256 amountIn = 10 ether;
-    //    uint256 mintRatio = 1_000;
-    uint256 mintAssTokenAmount = (((convertToAssTokens * amountIn) / 1 ether) * mintRatio) / minter.DENOMINATOR();
-    uint256 buybackAssTokenAmount = ((amountIn - (amountIn * mintRatio) / minter.DENOMINATOR()) * swapToAssTokens) /
+    1 ether;
+    // mint AssTokenAmount + buyback AssTokenAmount
+    uint256 userReceiveAssTokenAmount = (((convertToAssTokens * amountIn) / 1 ether) * mintRatio) /
+      minter.DENOMINATOR() +
+      ((amountIn - (amountIn * mintRatio) / minter.DENOMINATOR()) * swapToAssTokens) /
       1 ether;
-    uint256 userReceiveAssTokenAmount = mintAssTokenAmount + buybackAssTokenAmount;
-    uint256 minOut = userReceiveAssTokenAmount;
     uint256 estimateTotalOut = minter.estimateTotalOut(amountIn, mintRatio);
-    assertEq(estimateTotalOut, minOut);
+    assertEq(estimateTotalOut, userReceiveAssTokenAmount);
     token.approve(address(minter), amountIn);
 
     uint256 beforeTotalTokens = minter.totalTokens();
     uint256 beforeMinterBalance = IERC20(token).balanceOf(address(minter));
-    uint256 beforeUserTokenBalance = IERC20(token).balanceOf(user1);
-    uint256 beforeTotalSupply = IERC20(assToken).totalSupply();
-    uint256 beforeUserAssTokenBalance = IERC20(assToken).balanceOf(user1);
 
-    uint256 result = minter.smartMint(amountIn, mintRatio, minOut);
+    minter.smartMint(amountIn, mintRatio, userReceiveAssTokenAmount);
 
     uint256 afterTotalTokens = minter.totalTokens();
     uint256 afterMinterBalance = IERC20(token).balanceOf(address(minter));
-    uint256 afterUserTokenBalance = IERC20(token).balanceOf(user1);
-    uint256 afterTotalSupply = IERC20(assToken).totalSupply();
-    uint256 afterUserAssTokenBalance = IERC20(assToken).balanceOf(user1);
 
     assertEq(afterTotalTokens - beforeTotalTokens, (amountIn * mintRatio) / minter.DENOMINATOR());
     assertEq(afterMinterBalance - beforeMinterBalance, 0);
-    assertEq(afterTotalSupply - beforeTotalSupply, mintAssTokenAmount);
-    assertEq(beforeUserTokenBalance - afterUserTokenBalance, amountIn);
-    assertEq(afterUserAssTokenBalance - beforeUserAssTokenBalance, userReceiveAssTokenAmount);
-    assertEq(result, userReceiveAssTokenAmount);
 
     uint256 assTokenTotalSupply = IERC20(assToken).totalSupply();
 
@@ -307,174 +309,109 @@ contract MinterTest is Test {
   /**
    * @dev test compoundRewards
    */
-  function testCompoundVeTokenRewardsSuccess() public {
-    compoundVeTokenRewardsSuccess(100 ether);
+  function testCompoundRewardsSuccess() public {
+    compoundRewardsSuccess(100 ether);
   }
 
   /**
    * @dev  compoundRewards
    */
-  function compoundVeTokenRewardsSuccess(uint256 amountIn) public {
-    // Prepare Fee Ratio
-    // (10_000 = 100%)
-    uint256 veTokenRewardsFeeRate = 1000;
-
+  function compoundRewardsSuccess(uint256 amountIn) public {
     vm.startPrank(manager);
     minter.updateFeeRate(IMinter.RewardsType.VeTokenRewards, veTokenRewardsFeeRate);
+    minter.updateFeeRate(IMinter.RewardsType.VoteRewards, voteRewardsFeeRate);
+    minter.updateFeeRate(IMinter.RewardsType.Donate, donateRewardsFeeRate);
     vm.stopPrank();
 
-    //compound VeTokenRewards success
-    //uint256 amountIn = 100 ether;
+    // rewards type array
+    IMinter.RewardsType[] memory rewardsTypes = new IMinter.RewardsType[](3);
+    rewardsTypes[0] = IMinter.RewardsType.VeTokenRewards;
+    rewardsTypes[1] = IMinter.RewardsType.VoteRewards;
+    rewardsTypes[2] = IMinter.RewardsType.Donate;
+    // total rewards per type array
+    uint256[] memory totalRewards = new uint256[](3);
+    totalRewards[0] = amountIn;
+    totalRewards[1] = amountIn;
+    totalRewards[2] = amountIn;
 
     vm.startPrank(compounder);
-    deal(address(token), compounder, amountIn);
+    deal(address(token), compounder, amountIn * 3);
+
     uint256 beforeTotalFee = minter.totalFee();
     uint256 beforeTotalTokens = minter.totalTokens();
-    uint256 beforeTotalRewards = minter.totalVeTokenRewards();
-    uint256 beforeMinterBalance = IERC20(token).balanceOf(address(minter));
-    uint256 beforeCompounderBalance = IERC20(token).balanceOf(compounder);
 
-    IERC20(token).safeIncreaseAllowance(address(minter), amountIn);
-    minter.compoundRewards(IMinter.RewardsType.VeTokenRewards, amountIn);
+    IERC20(token).safeIncreaseAllowance(address(minter), amountIn * 3);
+    minter.compoundRewards(rewardsTypes, totalRewards);
 
-    uint256 afterTotalFee = minter.totalFee();
-    uint256 afterTotalTokens = minter.totalTokens();
-    uint256 afterTotalRewards = minter.totalVeTokenRewards();
-    uint256 afterMinterBalance = IERC20(token).balanceOf(address(minter));
-    uint256 afterCompounderBalance = IERC20(token).balanceOf(compounder);
+    // vesting after 1 hour
+    skip(3600);
 
-    uint256 fee = (amountIn * veTokenRewardsFeeRate) / minter.DENOMINATOR();
-    assertEq(afterTotalFee - beforeTotalFee, fee);
-    assertEq(afterTotalTokens - beforeTotalTokens, amountIn - fee);
-    assertEq(afterTotalRewards - beforeTotalRewards, amountIn - fee);
-    console.log("afterMinterBalance %s", afterMinterBalance);
-    console.log("beforeMinterBalance %s", beforeMinterBalance);
-    assertEq(afterMinterBalance - beforeMinterBalance, fee);
-    assertEq(beforeCompounderBalance - afterCompounderBalance, amountIn);
+    // verify fee
+    uint256 fee = (amountIn * veTokenRewardsFeeRate) /
+      minter.DENOMINATOR() +
+      (amountIn * voteRewardsFeeRate) /
+      minter.DENOMINATOR() +
+      (amountIn * donateRewardsFeeRate) /
+      minter.DENOMINATOR();
+    // verify fee
+    assertEq(minter.totalFee() - beforeTotalFee, fee);
+    // verify total tokens
+    assertEq(minter.totalTokens() - beforeTotalTokens, amountIn * 3 - minter.getUnvestedAmount() - fee);
 
     uint256 assTokenTotalSupply = IERC20(assToken).totalSupply();
 
     //(tokens * totalSupply) / totalTokens
-    assertEq((1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1), minter.convertToAssTokens(1 ether));
-
+    assertEq((1 ether * (assTokenTotalSupply + 1)) / (minter.totalTokens() + 1), minter.convertToAssTokens(1 ether));
     //(assTokens * (totalTokens+1)) / (totalSupply+1)
-    assertEq((1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1), minter.convertToTokens(1 ether));
+    assertEq((1 ether * (minter.totalTokens() + 1)) / (assTokenTotalSupply + 1), minter.convertToTokens(1 ether));
 
     vm.stopPrank();
   }
 
-  /**
-   * @dev test compoundRewards
-   */
-  function testCompoundVoteRewardsSuccess() public {
-    // Prepare Fee Ratio
-    // (10_000 = 100%)
-    uint256 voteRewardsFeeRate = 2000;
-
-    vm.startPrank(manager);
-    minter.updateFeeRate(IMinter.RewardsType.VoteRewards, voteRewardsFeeRate);
-    vm.stopPrank();
-
-    //compound VeTokenRewards success
+  function testFeeAfterCompoundSuccess() public {
     uint256 amountIn = 100 ether;
 
-    //compound VoteRewards success
-    vm.startPrank(compounder);
-    deal(address(token), compounder, amountIn);
-    uint256 beforeTotalFee = minter.totalFee();
-    uint256 beforeTotalTokens = minter.totalTokens();
-    uint256 beforeTotalRewards = minter.totalVoteRewards();
-    uint256 beforeMinterBalance = IERC20(token).balanceOf(address(minter));
-    uint256 beforeCompounderBalance = IERC20(token).balanceOf(compounder);
+    uint256 beforeVeTokenRewards = minter.totalRewards(IMinter.RewardsType.VeTokenRewards);
+    uint256 beforeVoteRewards = minter.totalRewards(IMinter.RewardsType.VoteRewards);
+    uint256 beforeDonate = minter.totalRewards(IMinter.RewardsType.Donate);
 
-    IERC20(token).safeIncreaseAllowance(address(minter), amountIn);
-    minter.compoundRewards(IMinter.RewardsType.VoteRewards, amountIn);
+    compoundRewardsSuccess(amountIn);
 
-    uint256 afterTotalFee = minter.totalFee();
-    uint256 afterTotalTokens = minter.totalTokens();
-    uint256 afterTotalRewards = minter.totalVoteRewards();
-    uint256 afterMinterBalance = IERC20(token).balanceOf(address(minter));
-    uint256 afterCompounderBalance = IERC20(token).balanceOf(compounder);
+    uint256 afterVeTokenRewards = minter.totalRewards(IMinter.RewardsType.VeTokenRewards);
+    uint256 afterVoteRewards = minter.totalRewards(IMinter.RewardsType.VoteRewards);
+    uint256 afterDonate = minter.totalRewards(IMinter.RewardsType.Donate);
 
-    uint256 fee = (amountIn * voteRewardsFeeRate) / minter.DENOMINATOR();
-    assertEq(afterTotalFee - beforeTotalFee, fee);
-    assertEq(afterTotalTokens - beforeTotalTokens, amountIn - fee);
-    assertEq(afterTotalRewards - beforeTotalRewards, amountIn - fee);
-    assertEq(afterMinterBalance - beforeMinterBalance, fee);
-    assertEq(beforeCompounderBalance - afterCompounderBalance, amountIn);
-
-    uint256 assTokenTotalSupply = IERC20(assToken).totalSupply();
-    //(tokens * (totalSupply+1)) / (totalTokens+1)
-    assertEq((1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1), minter.convertToAssTokens(1 ether));
-
-    //(assTokens * (totalTokens+1)) / (totalSupply+1)
-    assertEq((1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1), minter.convertToTokens(1 ether));
-
-    vm.stopPrank();
-  }
-
-  /**
-   * @dev test compoundRewards
-   */
-  function testCompoundDonateRewardsSuccess() public {
-    // Prepare Fee Ratio
-    // (10_000 = 100%)
-    uint256 donateRewardsFeeRate = 3000;
-
-    vm.startPrank(manager);
-    minter.updateFeeRate(IMinter.RewardsType.Donate, donateRewardsFeeRate);
-    vm.stopPrank();
-
-    //compound VeTokenRewards success
-    uint256 amountIn = 100 ether;
-
-    //compound donateRewards success
-    vm.startPrank(compounder);
-    deal(address(token), compounder, amountIn);
-    uint256 beforeTotalFee = minter.totalFee();
-    uint256 beforeTotalTokens = minter.totalTokens();
-    uint256 beforeTotalRewards = minter.totalDonateRewards();
-    uint256 beforeMinterBalance = IERC20(token).balanceOf(address(minter));
-    uint256 beforeCompounderBalance = IERC20(token).balanceOf(compounder);
-
-    IERC20(token).safeIncreaseAllowance(address(minter), amountIn);
-    minter.compoundRewards(IMinter.RewardsType.Donate, amountIn);
-
-    uint256 afterTotalFee = minter.totalFee();
-    uint256 afterTotalTokens = minter.totalTokens();
-    uint256 afterTotalRewards = minter.totalDonateRewards();
-    uint256 afterMinterBalance = IERC20(token).balanceOf(address(minter));
-    uint256 afterCompounderBalance = IERC20(token).balanceOf(compounder);
-
-    uint256 fee = (amountIn * donateRewardsFeeRate) / minter.DENOMINATOR();
-    assertEq(afterTotalFee - beforeTotalFee, fee);
-    assertEq(afterTotalTokens - beforeTotalTokens, amountIn - fee);
-    assertEq(afterTotalRewards - beforeTotalRewards, amountIn - fee);
-    assertEq(afterMinterBalance - beforeMinterBalance, fee);
-    assertEq(beforeCompounderBalance - afterCompounderBalance, amountIn);
-
-    uint256 assTokenTotalSupply = IERC20(assToken).totalSupply();
-    //(tokens * (totalSupply+1)) / (totalTokens+1)
-    assertEq((1 ether * (assTokenTotalSupply + 1)) / (afterTotalTokens + 1), minter.convertToAssTokens(1 ether));
-
-    //(assTokens * (totalTokens+1)) / (totalSupply+1)
-    assertEq((1 ether * (afterTotalTokens + 1)) / (assTokenTotalSupply + 1), minter.convertToTokens(1 ether));
-
-    vm.stopPrank();
+    assertEq(
+      afterVeTokenRewards - beforeVeTokenRewards,
+      amountIn - (amountIn * veTokenRewardsFeeRate) / minter.DENOMINATOR()
+    );
+    assertEq(afterVoteRewards - beforeVoteRewards, amountIn - (amountIn * voteRewardsFeeRate) / minter.DENOMINATOR());
+    assertEq(afterDonate - beforeDonate, amountIn - (amountIn * donateRewardsFeeRate) / minter.DENOMINATOR());
   }
 
   /**
    * @dev test compoundRewards
    */
   function testCompoundRewardsFail() public {
+    // rewards type array
+    IMinter.RewardsType[] memory rewardsTypes = new IMinter.RewardsType[](3);
+    rewardsTypes[0] = IMinter.RewardsType.VeTokenRewards;
+    rewardsTypes[1] = IMinter.RewardsType.VoteRewards;
+    rewardsTypes[2] = IMinter.RewardsType.Donate;
+    // total rewards per type array
+    uint256[] memory totalRewards = new uint256[](3);
+    totalRewards[0] = 0;
+    totalRewards[1] = 0;
+    totalRewards[2] = 0;
+
     //user no access
     vm.expectRevert();
-    minter.compoundRewards(IMinter.RewardsType.VeTokenRewards, 1 ether);
+    minter.compoundRewards(rewardsTypes, totalRewards);
 
     //Invalid amount
     vm.startPrank(compounder);
-    vm.expectRevert("Invalid amount");
-    minter.compoundRewards(IMinter.RewardsType.VeTokenRewards, 0);
+    vm.expectRevert("Invalid compound amount");
+    minter.compoundRewards(rewardsTypes, totalRewards);
     vm.stopPrank();
   }
 
@@ -515,20 +452,20 @@ contract MinterTest is Test {
 
     //update VoteRewards success
     vm.startPrank(manager);
-    minter.updateFeeRate(IMinter.RewardsType.VoteRewards, 1000);
-    assertEq(minter.voteRewardsFeeRate(), 1000);
+    minter.updateFeeRate(IMinter.RewardsType.VoteRewards, voteRewardsFeeRate);
+    assertEq(minter.voteRewardsFeeRate(), voteRewardsFeeRate);
     vm.stopPrank();
 
     //update VeTokenRewards success
     vm.startPrank(manager);
-    minter.updateFeeRate(IMinter.RewardsType.VeTokenRewards, 2000);
-    assertEq(minter.veTokenRewardsFeeRate(), 2000);
+    minter.updateFeeRate(IMinter.RewardsType.VeTokenRewards, veTokenRewardsFeeRate);
+    assertEq(minter.veTokenRewardsFeeRate(), veTokenRewardsFeeRate);
     vm.stopPrank();
 
     //update Donate success
     vm.startPrank(manager);
-    minter.updateFeeRate(IMinter.RewardsType.Donate, 3000);
-    assertEq(minter.donateRewardsFeeRate(), 3000);
+    minter.updateFeeRate(IMinter.RewardsType.Donate, donateRewardsFeeRate);
+    assertEq(minter.donateRewardsFeeRate(), donateRewardsFeeRate);
     vm.stopPrank();
   }
 
@@ -537,7 +474,7 @@ contract MinterTest is Test {
    */
   function testWithdrawFee() public {
     address receipt = makeAddr("receipt");
-    uint256 amountIn = 1 ether;
+    uint256 amountIn = 100 ether;
     //user no access
     vm.expectRevert();
     minter.withdrawFee(receipt, amountIn);
@@ -554,32 +491,32 @@ contract MinterTest is Test {
     minter.withdrawFee(receipt, 0);
     vm.stopPrank();
 
+    uint256 totalFee = minter.totalFee();
+    totalFee += 1;
     //amountIn > totalFee
     vm.startPrank(manager);
-    uint256 totalFee = minter.totalFee();
     vm.expectRevert("Invalid amount");
-    minter.withdrawFee(receipt, totalFee + 1);
+    minter.withdrawFee(receipt, totalFee);
     vm.stopPrank();
 
-    //withdrawFee success
-    //prepare fee
-    testCompoundVoteRewardsSuccess();
+    // compound rewards
+    compoundRewardsSuccess(amountIn);
+
     vm.startPrank(manager);
 
     uint256 beforeTotalFee = minter.totalFee();
     uint256 beforeMinterBalance = IERC20(token).balanceOf(address(minter));
     uint256 beforeReceiptBalance = IERC20(token).balanceOf(receipt);
 
-    amountIn = beforeTotalFee;
-    minter.withdrawFee(receipt, amountIn);
+    console.log("beforeTotalFee:%s", beforeTotalFee);
+    console.log("beforeMinterBalance:%s", beforeMinterBalance);
 
-    uint256 afterTotalFee = minter.totalFee();
-    uint256 afterMinterBalance = IERC20(token).balanceOf(address(minter));
-    uint256 afterReceiptBalance = IERC20(token).balanceOf(receipt);
+    // withdraw all
+    uint256 withdrawAmt = beforeTotalFee;
+    minter.withdrawFee(receipt, withdrawAmt);
 
-    assertEq(beforeTotalFee - afterTotalFee, amountIn);
-    assertEq(beforeMinterBalance - afterMinterBalance, amountIn);
-    assertEq(afterReceiptBalance - beforeReceiptBalance, amountIn);
+    assertEq(beforeTotalFee - minter.totalFee(), withdrawAmt);
+    assertEq(beforeMinterBalance - IERC20(token).balanceOf(address(minter)), withdrawAmt);
 
     vm.stopPrank();
   }

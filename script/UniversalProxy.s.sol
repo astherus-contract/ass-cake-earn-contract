@@ -51,11 +51,6 @@ contract UniversalProxyScript is Script {
     require(ifo != address(0), "ifo address cannot be null");
     console.log("ifo: %s", ifo);
 
-    // rewardDistributionScheduler
-    address rewardDistributionScheduler = vm.envAddress("REWARD_DISTRIBUTION_SCHEDULER");
-    require(rewardDistributionScheduler != address(0), "rewardDistributionScheduler address cannot be null");
-    console.log("rewardDistributionScheduler: %s", rewardDistributionScheduler);
-
     // revenueSharingPools
     address[] memory revenueSharingPools = new address[](2);
     revenueSharingPools[0] = vm.envAddress("UP_REVENUE_SHARING_POOL_1");
@@ -90,7 +85,7 @@ contract UniversalProxyScript is Script {
           veToken,
           gaugeVoting,
           ifo,
-          rewardDistributionScheduler,
+          deployer,
           revenueSharingPools,
           revenueSharingPoolGateway,
           cakePlatform

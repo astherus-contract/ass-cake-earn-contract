@@ -23,6 +23,6 @@ interface IMinter {
 
   function smartMint(uint256 _amountIn, uint256 _mintRatio, uint256 _minOut) external returns (uint256);
 
-  function compoundRewards(IMinter.RewardsType _rewardsType, uint256 _amountIn) external;
+  function compoundRewards(RewardsType[] memory _rewardsTypes, uint256[] memory _rewards) external;
 
 }

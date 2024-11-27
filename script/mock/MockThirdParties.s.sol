@@ -29,7 +29,7 @@ contract MockThirdPartiesScript is Script {
     // deploy assToken
     address assTokenPxy = Upgrades.deployUUPSProxy(
       "AssToken.sol",
-      abi.encodeCall(AssToken.initialize, ("AssCAKE", "AssCAKE", deployer, deployer))
+      abi.encodeCall(AssToken.initialize, ("Astherus CAKE", "asCAKE", deployer, deployer))
     );
     AssToken assToken = AssToken(assTokenPxy);
     // deploy gauge voting

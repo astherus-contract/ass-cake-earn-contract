@@ -39,6 +39,7 @@ contract AssToken is IAssToken, ERC20PermitUpgradeable, OwnableUpgradeable, UUPS
     __Ownable_init(_owner);
     __ERC20_init(_name, _symbol);
     __ERC20Permit_init(_name);
+    __UUPSUpgradeable_init();
 
     minter = _minter;
   }

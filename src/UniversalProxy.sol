@@ -58,6 +58,7 @@ contract UniversalProxy is
   // maximum lock duration = 4 years - 1s (same as PCS)
   uint256 public constant WEEK = 7 days;
   uint256 public constant MAX_LOCK_DURATION = (209 * WEEK) - 1;
+  uint256 public constant REWARD_VESTING_EPOCHS = 7;
 
   /* ============ Events ============ */
   event LockIncreased(uint256 value);
@@ -112,8 +113,10 @@ contract UniversalProxy is
     require(_rewardDistributionScheduler != address(0), "Invalid rewardDistributionScheduler address");
     require(_revenueSharingPools.length > 0, "revenueSharingPools must have at least one address");
 
+    __AccessControl_init();
     __Pausable_init();
     __ReentrancyGuard_init();
+    __UUPSUpgradeable_init();
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(PAUSER, _pauser);
     _grantRole(MINTER, _minter);
@@ -183,6 +186,18 @@ contract UniversalProxy is
     }
   }
 
+  // @dev check if we need to extend lock
+  function needToExtendLock() external view returns (bool) {
+    // lock is not created yet
+    if (!lockCreated) {
+      return false;
+    }
+    // get lock end time and new unlock time
+    (, uint256 end, , , , , , ) = veToken.getUserInfo(address(this));
+    uint256 newUnlockTime = block.timestamp + MAX_LOCK_DURATION;
+    return ((newUnlockTime / 1 weeks) * 1 weeks) > end;
+  }
+
   // ------------------------------ //
   //             Voting             //
   // ------------------------------ //
@@ -230,7 +245,7 @@ contract UniversalProxy is
     rewardsDistributionScheduler.addRewardsSchedule(
       IMinter.RewardsType.VeTokenRewards,
       totalClaimed,
-      7,
+      REWARD_VESTING_EPOCHS,
       block.timestamp
     );
     emit VeTokenRewardsClaimed(totalClaimed);

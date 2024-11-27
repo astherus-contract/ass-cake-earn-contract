@@ -70,7 +70,7 @@ contract MockPancakeStableSwapPool is IPancakeStableSwapPool, IPancakeStableSwap
     address to
   ) external payable override returns (uint256 amountOut) {
     IERC20(path[0]).safeTransferFrom(msg.sender, address(this), amountIn);
-    uint256 amountOut = get_amount_out(path[0], path[1], amountIn);
+    amountOut = get_amount_out(path[0], path[1], amountIn);
     require(amountOut >= amountOutMin, "MockPancakeStableSwapPool: INSUFFICIENT_OUTPUT_AMOUNT");
     IERC20(path[1]).safeTransfer(to, amountOut);
     return amountOut;
