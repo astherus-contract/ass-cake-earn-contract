@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import "forge-std/Script.sol";
 import { AssToken } from "../src/AssToken.sol";
@@ -14,10 +14,7 @@ contract AsCakeScript is Script {
     vm.startBroadcast();
     address asCAKEProxy = Upgrades.deployUUPSProxy(
       "AssToken.sol",
-      abi.encodeCall(
-        AssToken.initialize,
-        ("Astherus CAKE", "asCAKE", deployer, deployer)
-      )
+      abi.encodeCall(AssToken.initialize, ("Astherus CAKE", "asCAKE", deployer, deployer))
     );
     vm.stopBroadcast();
     console.log("asCAKE address: %s", address(asCAKEProxy));
