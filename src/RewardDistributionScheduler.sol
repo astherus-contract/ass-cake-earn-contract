@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
@@ -121,10 +121,20 @@ contract RewardDistributionScheduler is
     token.safeTransferFrom(msg.sender, address(this), _amount);
     // average daily reward amount
     uint256 amountPerDay = _amount / _epochs;
+    // accrued amount except the last epoch
+    uint256 _amtExceptLastEpoch;
     // spread rewards every day
     for (uint256 i; i < _epochs; i++) {
-      // accumulation of different reward types
-      epochs[startTime + i * 1 days][_rewardsType] += amountPerDay;
+      if (i == _epochs - 1) {
+        // @dev the last epoch = total amount - accrued amount
+        // to prevent the loss of precision
+        epochs[startTime + i * 1 days][_rewardsType] += _amount - _amtExceptLastEpoch;
+      } else {
+        // accumulation of different reward types
+        epochs[startTime + i * 1 days][_rewardsType] += amountPerDay;
+        // accumulated amount
+        _amtExceptLastEpoch += amountPerDay;
+      }
     }
     // emit event
     emit RewardsScheduleAdded(msg.sender, _rewardsType, _amount, _epochs, startTime);

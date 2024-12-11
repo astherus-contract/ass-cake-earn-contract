@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
@@ -175,6 +175,7 @@ contract UniversalProxy is
 
   // @dev extend lock with max. unlock timestamp
   function _extendLock() private {
+    require(lockCreated, "lock not created");
     // get new unlock time
     uint256 newUnlockTime = block.timestamp + MAX_LOCK_DURATION;
     // get lock end time

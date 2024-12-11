@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 /// @title RevenueSharingPool Contract interface
 /// @notice user who has veToken can claim revenue from this pool

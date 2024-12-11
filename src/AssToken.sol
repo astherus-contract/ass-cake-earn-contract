@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "./interfaces/IAssToken.sol";
 
-contract AssToken is IAssToken, ERC20PermitUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
+contract AssToken is IAssToken, ERC20PermitUpgradeable, Ownable2StepUpgradeable, UUPSUpgradeable {
   /* ============ State Variables ============ */
   address public minter;
 

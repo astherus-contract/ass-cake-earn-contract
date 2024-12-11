@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
@@ -41,12 +41,6 @@ contract Minter is
   IAssToken public assToken;
   // total tokens
   uint256 private _totalTokens;
-  // total veToken rewards
-  uint256 public totalVeTokenRewards;
-  // total vote rewards
-  uint256 public totalVoteRewards;
-  // total donate rewards
-  uint256 public totalDonateRewards;
   // total rewards per type
   mapping(IMinter.RewardsType => uint256) public totalRewards;
   // veToken rewards fee rate in percentage (10_000 = 100%)
