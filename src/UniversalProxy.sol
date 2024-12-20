@@ -66,6 +66,7 @@ contract UniversalProxy is
   event VeTokenRewardsClaimed(uint256 amount);
   event IFODeposited(uint8 pid, uint256 amount);
   event IFOHarvested(uint8 pid, address rewardToken, uint256 amount);
+  event IFOChanged(address oldIFO, address newIFO);
   event RevenuePoolIdsSet(address[] poolIds);
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -361,6 +362,18 @@ contract UniversalProxy is
       "rewardDistributionScheduler can't be the same address"
     );
     rewardsDistributionScheduler = IRewardDistributionScheduler(_rewardDistributionScheduler);
+  }
+
+  /**
+   * @dev set IFO contract
+   * @param newIFO - address of the new IFO contract
+   */
+  function setIFO(address newIFO) external onlyRole(MANAGER) {
+    require(newIFO != address(0), "Invalid IFO address");
+    require(newIFO != address(ifo), "IFO can't be the same address");
+    address oldIFO = address(ifo);
+    ifo = IIFOV8(newIFO);
+    emit IFOChanged(oldIFO, newIFO);
   }
 
   /**
