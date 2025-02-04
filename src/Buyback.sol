@@ -72,6 +72,8 @@ contract Buyback is
    * @dev initialize the contract
    * @param _admin - Address of the admin
    * @param _manager - Address of the manager
+   * @param _pauser - Address of the pauser
+   * @param _bot - Address of the bot
    * @param _swapDstToken - Address of the swapDstToken
    * @param _receiver - Address of the receiver
    * @param _oneInchRouter - Address of swap oneInchRouter
@@ -80,6 +82,7 @@ contract Buyback is
     address _admin,
     address _manager,
     address _pauser,
+    address _bot,
     address _swapDstToken,
     address _receiver,
     address _oneInchRouter,
@@ -88,6 +91,7 @@ contract Buyback is
     require(_admin != address(0), "Invalid admin address");
     require(_manager != address(0), "Invalid _manager address");
     require(_pauser != address(0), "Invalid _pauser address");
+    require(_bot != address(0), "Invalid bot address");
     require(_swapDstToken != address(0), "Invalid swapDstToken address");
     require(_receiver != address(0), "Invalid receiver address");
     require(_oneInchRouter != address(0), "Invalid oneInchRouter address");
@@ -101,6 +105,7 @@ contract Buyback is
     _grantRole(DEFAULT_ADMIN_ROLE, _admin);
     _grantRole(MANAGER, _manager);
     _grantRole(PAUSER, _pauser);
+    _grantRole(BOT, _bot);
 
     swapDstToken = _swapDstToken;
     receiver = _receiver;
@@ -217,6 +222,7 @@ contract Buyback is
    * @param oneInchRouter - Address of the oneInchRouter for 1inch swap
    */
   function add1InchRouterWhitelist(address oneInchRouter) external onlyRole(MANAGER) {
+    require(oneInchRouter != address(0), "oneInchRouter is the zero address");
     require(!oneInchRouterWhitelist[oneInchRouter], "oneInchRouter already whitelisted");
 
     // add oneInchRouter to oneInchRouterWhitelist
@@ -241,6 +247,7 @@ contract Buyback is
    * @param srcToken - Address of the srcToken for 1inch swap
    */
   function addSwapSrcTokenWhitelist(address srcToken) external onlyRole(MANAGER) {
+    require(srcToken != address(0), "srcToken is the zero address");
     require(!swapSrcTokenWhitelist[srcToken], "srcToken already whitelisted");
 
     // add srcToken to swapSrcTokenWhitelist

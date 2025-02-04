@@ -18,6 +18,9 @@ contract BuybackScript is Script {
     console.log("Manager: %s", manager);
     address pauser = vm.envOr("PAUSER", admin);
     console.log("Pauser: %s", pauser);
+    address bot = vm.envOr("BOT", admin);
+    console.log("Bot: %s", bot);
+
     // swapDstToken
     address swapDstToken = vm.envAddress("ONE_INCH_SWAP_DST_TOKEN");
     require(swapDstToken != address(0), "swapDstToken address cannot be null");
@@ -44,7 +47,7 @@ contract BuybackScript is Script {
       "Buyback.sol",
       abi.encodeCall(
         Buyback.initialize,
-        (admin, manager, pauser, swapDstToken, receiver, oneInchRouter, swapNativeToken)
+        (admin, manager, pauser, bot, swapDstToken, receiver, oneInchRouter, swapNativeToken)
       )
     );
 

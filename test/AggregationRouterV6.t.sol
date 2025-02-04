@@ -40,7 +40,16 @@ contract AggregationRouterV6Test is Test {
       "Buyback.sol",
       abi.encodeCall(
         Buyback.initialize,
-        (admin, manager, pauser, address(swapDstToken), address(receiver), address(oneInchRouter), SWAP_NATIVE_ADDRESS)
+        (
+          admin,
+          manager,
+          pauser,
+          bot,
+          address(swapDstToken),
+          address(receiver),
+          address(oneInchRouter),
+          SWAP_NATIVE_ADDRESS
+        )
       )
     );
     buyback = Buyback(payable(buybackProxy));

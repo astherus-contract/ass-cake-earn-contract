@@ -204,4 +204,75 @@ contract UniversalProxyTest is Test {
     // cake platform will distribute 10 tokens to each recipient
     assertEq(token.balanceOf(recipient), 10 ether);
   }
+
+  function test_manual_distribute_rewards() public {
+    // assume some claimed
+    revenueSharingPoolGateway.claimMultipleWithoutProxy(revenueSharingPools, address(universalProxy));
+    // distribute rewards
+    vm.startPrank(manager);
+    uint256 balanceBefore = token.balanceOf(address(rewardDistributionScheduler));
+    universalProxy.handleClaimedVeTokenRewards(20 ether);
+    uint256 balanceAfter = token.balanceOf(address(rewardDistributionScheduler));
+    vm.stopPrank();
+    // rewardDistributionScheduler should receive 20 tokens
+    assertEq(balanceAfter - balanceBefore, 20 ether);
+  }
+
+  /**
+   * @dev test setRevenueSharingPoolGateway
+   */
+  function testSetRevenueSharingPoolGateway() public {
+    address revenueSharingPoolGatewayAddress = makeAddr("RevenueSharingPoolGateway");
+    //user no access
+    vm.expectRevert();
+    universalProxy.setRevenueSharingPoolGateway(revenueSharingPoolGatewayAddress);
+
+    //zero address
+    vm.startPrank(manager);
+    vm.expectRevert("Invalid revenueSharingPoolGateway address");
+    universalProxy.setRevenueSharingPoolGateway(address(0));
+    vm.stopPrank();
+
+    //change success
+    vm.startPrank(manager);
+    universalProxy.setRevenueSharingPoolGateway(revenueSharingPoolGatewayAddress);
+    assertEq(address(universalProxy.revenueSharingPoolGateway()), revenueSharingPoolGatewayAddress);
+    vm.stopPrank();
+
+    //duplicate change
+    vm.startPrank(manager);
+    assertEq(address(universalProxy.revenueSharingPoolGateway()), revenueSharingPoolGatewayAddress);
+    vm.expectRevert("RevenueSharingPoolGateway can't be the same address");
+    universalProxy.setRevenueSharingPoolGateway(revenueSharingPoolGatewayAddress);
+    vm.stopPrank();
+  }
+
+  /**
+   * @dev test setCakePlatform
+   */
+  function testSetCakePlatform() public {
+    address cakePlatformAddress = makeAddr("CakePlatform");
+    //user no access
+    vm.expectRevert();
+    universalProxy.setCakePlatform(cakePlatformAddress);
+
+    //zero address
+    vm.startPrank(manager);
+    vm.expectRevert("Invalid cakePlatform address");
+    universalProxy.setCakePlatform(address(0));
+    vm.stopPrank();
+
+    //change success
+    vm.startPrank(manager);
+    universalProxy.setCakePlatform(cakePlatformAddress);
+    assertEq(address(universalProxy.cakePlatform()), cakePlatformAddress);
+    vm.stopPrank();
+
+    //duplicate change
+    vm.startPrank(manager);
+    assertEq(address(universalProxy.cakePlatform()), cakePlatformAddress);
+    vm.expectRevert("CakePlatform can't be the same address");
+    universalProxy.setCakePlatform(cakePlatformAddress);
+    vm.stopPrank();
+  }
 }

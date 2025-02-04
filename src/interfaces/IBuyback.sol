@@ -20,6 +20,7 @@ interface IBuyback {
     address _admin,
     address _manager,
     address _pauser,
+    address _bot,
     address _token,
     address _receiver,
     address _oneInchRouter,

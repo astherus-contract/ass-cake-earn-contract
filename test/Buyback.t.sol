@@ -48,16 +48,20 @@ curl --location 'https://api.1inch.dev/swap/v6.0/56/swap?src=0xba2ae424d960c2624
       "Buyback.sol",
       abi.encodeCall(
         Buyback.initialize,
-        (admin, manager, pauser, address(swapDstToken), address(receiver), address(oneInchRouter), swapNativeSrcToken)
+        (
+          admin,
+          manager,
+          pauser,
+          bot,
+          address(swapDstToken),
+          address(receiver),
+          address(oneInchRouter),
+          swapNativeSrcToken
+        )
       )
     );
     buyback = Buyback(payable(buybackProxy));
     console.log("buyback proxy address: %s", buybackProxy);
-    vm.stopPrank();
-
-    //grant access
-    vm.startPrank(admin);
-    buyback.grantRole(buyback.BOT(), bot);
     vm.stopPrank();
 
     // add swapSrcToken

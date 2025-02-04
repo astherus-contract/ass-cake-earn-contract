@@ -5,6 +5,8 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./interfaces/IUniversalProxy.sol";
@@ -15,6 +17,7 @@ import "./interfaces/pancakeswap/IGaugeVoting.sol";
 import "./interfaces/pancakeswap/IRevenueSharingPool.sol";
 import "./interfaces/pancakeswap/IRevenueSharingPoolGateway.sol";
 import "./interfaces/pancakeswap/IIFOV8.sol";
+import "./interfaces/pancakeswap/IPancakeProfile.sol";
 import "./interfaces/stakeDao/ICakePlatform.sol";
 
 contract UniversalProxy is
@@ -22,7 +25,8 @@ contract UniversalProxy is
   AccessControlUpgradeable,
   PausableUpgradeable,
   ReentrancyGuardUpgradeable,
-  UUPSUpgradeable
+  UUPSUpgradeable,
+  IERC721Receiver
 {
   using SafeERC20 for IERC20;
   // pause role
@@ -55,6 +59,10 @@ contract UniversalProxy is
 
   // lock created flag
   bool public lockCreated;
+
+  // register on PancakeSwap's profile in order to participating in IFO
+  address pancakeProfile;
+
   // maximum lock duration = 4 years - 1s (same as PCS)
   uint256 public constant WEEK = 7 days;
   uint256 public constant MAX_LOCK_DURATION = (209 * WEEK) - 1;
@@ -68,6 +76,10 @@ contract UniversalProxy is
   event IFOHarvested(uint8 pid, address rewardToken, uint256 amount);
   event IFOChanged(address oldIFO, address newIFO);
   event RevenuePoolIdsSet(address[] poolIds);
+  event GaugeVotingChanged(address oldGaugeVoting, address newGaugeVoting);
+  event RevenueSharingPoolGatewayChanged(address oldRevenueSharingPoolGateway, address newRevenueSharingPoolGateway);
+  event CakePlatformChanged(address oldCakePlatform, address newCakePlatform);
+  event PancakeProfileChanged(address oldPancakeProfile, address newPancakeProfile);
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -253,6 +265,29 @@ contract UniversalProxy is
     emit VeTokenRewardsClaimed(totalClaimed);
   }
 
+  /**
+   * @dev claim pending veToken rewards to this contract
+   * @notice as revenueSharingPoolGateway.claimMultipleWithoutProxy() can be called by anyone
+   *         if someone else call it for this contract before the bot call claimVeTokenRewards(),
+   *         then it will not work as rewards came to this contract already, thus rewards couldn't distribute automatically.
+   *         under this situation, we can call this function manually to distribute the claimed rewards
+   * @param amount - amount to distribute, should be same as the last amount of rewards claimed
+   */
+  function handleClaimedVeTokenRewards(uint256 amount) external onlyRole(MANAGER) whenNotPaused nonReentrant {
+    require(amount > 0, "amount must be greater than 0");
+    require(amount <= token.balanceOf(address(this)), "amount exceeds balance");
+    // approve rewardsDistributionScheduler to spend reward tokens
+    token.safeIncreaseAllowance(address(rewardsDistributionScheduler), amount);
+    // create rewards distribution schedule
+    rewardsDistributionScheduler.addRewardsSchedule(
+      IMinter.RewardsType.VeTokenRewards,
+      amount,
+      REWARD_VESTING_EPOCHS,
+      block.timestamp
+    );
+    emit VeTokenRewardsClaimed(amount);
+  }
+
   // ------------------------------ //
   //               IFO              //
   // ------------------------------ //
@@ -347,6 +382,7 @@ contract UniversalProxy is
    * @param poolIds - array of pool ids
    */
   function setRevenuePoolIds(address[] memory poolIds) external onlyRole(MANAGER) {
+    require(poolIds.length > 0, "revenueSharingPools must have at least one address");
     revenueSharingPools = poolIds;
     emit RevenuePoolIdsSet(poolIds);
   }
@@ -377,6 +413,70 @@ contract UniversalProxy is
   }
 
   /**
+   * @dev set gaugeVoting contract
+   * @param newGaugeVoting - address of the new gaugeVoting contract
+   */
+  function setGaugeVoting(address newGaugeVoting) external onlyRole(MANAGER) {
+    require(newGaugeVoting != address(0), "Invalid gaugeVoting address");
+    require(newGaugeVoting != address(gaugeVoting), "GaugeVoting can't be the same address");
+    address oldGaugeVoting = address(gaugeVoting);
+    gaugeVoting = IGaugeVoting(newGaugeVoting);
+    emit GaugeVotingChanged(oldGaugeVoting, newGaugeVoting);
+  }
+
+  /**
+   * @dev set revenueSharingPoolGateway contract
+   * @param newRevenueSharingPoolGateway - address of the new revenueSharingPoolGateway contract
+   */
+  function setRevenueSharingPoolGateway(address newRevenueSharingPoolGateway) external onlyRole(MANAGER) {
+    require(newRevenueSharingPoolGateway != address(0), "Invalid revenueSharingPoolGateway address");
+    require(
+      newRevenueSharingPoolGateway != address(revenueSharingPoolGateway),
+      "RevenueSharingPoolGateway can't be the same address"
+    );
+    address oldRevenueSharingPoolGateway = address(revenueSharingPoolGateway);
+    revenueSharingPoolGateway = IRevenueSharingPoolGateway(newRevenueSharingPoolGateway);
+    emit RevenueSharingPoolGatewayChanged(oldRevenueSharingPoolGateway, newRevenueSharingPoolGateway);
+  }
+
+  /**
+   * @dev set cakePlatform contract
+   * @param newCakePlatform - address of the new cakePlatform contract
+   */
+  function setCakePlatform(address newCakePlatform) external onlyRole(MANAGER) {
+    require(newCakePlatform != address(0), "Invalid cakePlatform address");
+    require(newCakePlatform != address(cakePlatform), "CakePlatform can't be the same address");
+    address oldCakePlatform = address(cakePlatform);
+    cakePlatform = ICakePlatform(newCakePlatform);
+    emit CakePlatformChanged(oldCakePlatform, newCakePlatform);
+  }
+
+  /**
+   * @dev create pancakeProfile
+   * @param teamId - team id
+   * @param nftAddress - address of the NFT
+   * @param tokenId - token id
+   */
+  function createProfile(uint256 teamId, address nftAddress, uint256 tokenId) external onlyRole(MANAGER) {
+    require(pancakeProfile != address(0), "Invalid pancakeProfile address");
+    require(nftAddress != address(0), "Invalid nftAddress address");
+    // approve pancakeProfile to spend NFT
+    IERC721(nftAddress).approve(pancakeProfile, tokenId);
+    IPancakeProfile(pancakeProfile).createProfile(teamId, nftAddress, tokenId);
+  }
+
+  /**
+   * @dev set pancakeProfile contract address
+   * @param _pancakeProfile - address of the pancakeProfile contract
+   */
+  function setPancakeProfile(address _pancakeProfile) external onlyRole(MANAGER) {
+    require(_pancakeProfile != address(0), "Invalid pancakeProfile address");
+    require(_pancakeProfile != pancakeProfile, "pancakeProfile can't be the same address");
+    pancakeProfile = _pancakeProfile;
+    emit PancakeProfileChanged(pancakeProfile, _pancakeProfile);
+  }
+
+  /**
    * @dev unpause the contract
    */
   function unpause() external onlyRole(MANAGER) {
@@ -388,6 +488,22 @@ contract UniversalProxy is
    */
   function pause() external onlyRole(PAUSER) {
     _pause();
+  }
+
+  /**
+   * @dev on nft received
+   * @param operator operator address
+   * @param from from address
+   * @param tokenId tokenId of LP token
+   * @param data call data
+   */
+  function onERC721Received(
+    address operator,
+    address from,
+    uint256 tokenId,
+    bytes calldata data
+  ) external override returns (bytes4) {
+    return IERC721Receiver.onERC721Received.selector;
   }
 
   function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
