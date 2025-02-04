@@ -494,7 +494,7 @@ contract Minter is
     }
 
     if (buybackAmount > 0) {
-      // make sure minOut is not 0
+      // make sure minOut is large than amount received
       require(_minOut > amountRec, "MinOut not match");
       //swap CAKE by pancakeSwap
       amountRec += _buyback(buybackAmount, _minOut - amountRec);
