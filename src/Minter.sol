@@ -487,7 +487,7 @@ contract Minter is
     uint256 amountRec = 0;
 
     if (mintAmount > 0) {
-      // swap to asCAKE by pancakeSwap
+      // mint asCAKE with `mintAmount` of CAKE
       amountRec += _mint(mintAmount);
       // increase total CAKE
       _totalTokens += mintAmount;
